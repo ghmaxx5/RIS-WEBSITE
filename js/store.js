@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v4.0 Strict Notice Deletion Guard)
+// RIS School — Central State Store (v4.1 Mark All Notices Read)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v3.7';
@@ -68,7 +68,7 @@ class Store {
 
   isAdminSessionActive() {
     const user = this.getCurrentUser();
-    if (user && user.role === 'student') return false; // Never active for student view
+    if (user && user.role === 'student') return false;
     return this.adminSessionActive || (user?.role === 'admin');
   }
 
@@ -238,7 +238,6 @@ class Store {
 
   canDeleteNotice(noticeId) {
     const user = this.getCurrentUser();
-    // STRICT LOCK: Students can NEVER delete any notice!
     if (!user || user.role === 'student') return false;
     const notice = this.data.notices.find(n => n.id === noticeId);
     if (!notice) return false;
@@ -264,6 +263,17 @@ class Store {
       notice.readBy.push(user.id);
       this.saveData();
     }
+  }
+
+  markAllNoticesRead() {
+    const user = this.getCurrentUser();
+    if (!user) return;
+    this.data.notices.forEach(n => {
+      if (!n.readBy.includes(user.id)) {
+        n.readBy.push(user.id);
+      }
+    });
+    this.saveData();
   }
 
   // --- MORNING ATTENDANCE ---

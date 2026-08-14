@@ -1,4 +1,4 @@
-// RIS School — Navbar Component (With Class Teacher Terminology)
+// RIS School — Navbar Component (With Mark All Notifications Read)
 import { store } from '../store.js';
 import { db } from '../db.js';
 
@@ -85,18 +85,33 @@ export function renderNavbar() {
                   ` : ''}
                 </button>
 
+                <!-- Notifications Dropdown Box -->
                 <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-72 sm:w-96 glass-card bg-slate-900/95 border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-50">
                   <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
                     <div class="font-bold text-sm flex items-center gap-2">
                       <i class="ph-bold ph-bell-ringing text-blue-400"></i> Announcements
                     </div>
-                    <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-semibold">${unreadCount} Unread</span>
+                    <div class="flex items-center gap-2">
+                      ${unreadCount > 0 ? `
+                        <button onclick="window.handleMarkAllNoticesRead()" class="text-xs text-blue-400 hover:text-blue-300 font-bold hover:underline flex items-center gap-1">
+                          <i class="ph-bold ph-checks"></i> Mark all read
+                        </button>
+                      ` : `
+                        <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-semibold">All Read</span>
+                      `}
+                    </div>
                   </div>
+
                   <div class="max-h-72 overflow-y-auto space-y-2 pr-1">
                     ${notices.length === 0 ? `<div class="text-xs text-slate-400">No active announcements.</div>` : ''}
                     ${notices.slice(0, 5).map(n => `
                       <div class="p-3 rounded-xl ${n.readBy.includes(user.id) ? 'bg-slate-800/40' : 'bg-blue-950/50 border border-blue-800/50'} text-xs cursor-pointer" onclick="window.markNoticeRead('${n.id}')">
-                        <div class="font-bold text-white mb-1">${n.title}</div>
+                        <div class="flex items-center justify-between mb-1">
+                          <span class="font-bold text-white flex items-center gap-1">
+                            ${n.priority === 'urgent' ? '<span class="text-red-400 font-extrabold">🚨 URGENT</span>' : ''}
+                            ${n.title}
+                          </span>
+                        </div>
                         <p class="text-slate-300 line-clamp-2">${n.content}</p>
                       </div>
                     `).join('')}

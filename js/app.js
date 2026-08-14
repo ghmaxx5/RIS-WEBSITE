@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v3.9 Strict Student Permission Lock)
+// RIS School — Main Controller & Client Router (v4.1 Mark All Read Handler)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -335,7 +335,13 @@ class App {
       this.render();
     };
 
-    // --- MORNING ATTENDANCE HANDLERS (STRICT STUDENT GUARD) ---
+    window.handleMarkAllNoticesRead = () => {
+      store.markAllNoticesRead();
+      this.showToast("All announcements marked as read!", "success");
+      this.render();
+    };
+
+    // --- MORNING ATTENDANCE HANDLERS ---
     window.loadAttendanceSheet = () => {
       this.loadAttendanceSheet();
     };
@@ -411,7 +417,7 @@ class App {
       document.getElementById('audit-log-drawer')?.classList.toggle('hidden');
     };
 
-    // --- STAFF & LEAVE HANDLERS (STRICT STUDENT GUARD) ---
+    // --- STAFF & LEAVE HANDLERS ---
     window.toggleStaffCheckIn = (teacherId) => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
@@ -522,7 +528,6 @@ class App {
     if (!container) return;
 
     const currentUser = store.getCurrentUser();
-    // Strictly block student role from rendering interactive controls!
     const isTeacherOrAdmin = currentUser && currentUser.role !== 'student' && (store.isAdminSessionActive() || currentUser.role === 'teacher' || currentUser.role === 'admin');
 
     const studentIds = Object.keys(this.attendanceState);
@@ -601,7 +606,7 @@ class App {
   }
 
   renderNoticeCardHtml(n, user) {
-    const canDelete = store.canDeleteNotice(n.id);
+    const canDelete = user && user.role !== 'student' && store.canDeleteNotice(n.id);
     return `
       <div class="glass-card p-6 space-y-3">
         <div class="flex items-center justify-between">
