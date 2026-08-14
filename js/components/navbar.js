@@ -1,13 +1,15 @@
-// RIS School — Navbar & Navigation Header Component (With Sign Out Security)
+// RIS School — Navbar & Navigation Header Component (With Admin Profile Switcher)
 import { store } from '../store.js';
 import { db } from '../db.js';
 
 export function renderNavbar() {
   const user = store.getCurrentUser();
+  const allUsers = store.getUsers();
   const notices = store.getNotices();
   
   const unreadNotices = user ? notices.filter(n => !n.readBy.includes(user.id)) : [];
   const unreadCount = unreadNotices.length;
+  const isAdmin = user && user.role === 'admin';
 
   return `
     <header class="top-header">
@@ -41,14 +43,30 @@ export function renderNavbar() {
             </button>
 
             ${user ? `
-              <!-- Logged-In User Profile Chip -->
-              <div class="flex items-center gap-2 bg-slate-800/90 px-3 py-1 rounded-full border border-slate-700 text-xs text-white">
-                <img src="${user.avatar}" class="w-6 h-6 rounded-full object-cover">
-                <span class="font-bold hidden sm:inline">${user.name}</span>
-                <span class="badge ${user.role === 'admin' ? 'badge-danger' : (user.role === 'teacher' ? 'badge-info' : 'badge-success')} text-[10px] uppercase">
-                  ${user.role}
-                </span>
-              </div>
+              <!-- ADMIN PROFILE SWITCHER DROPDOWN (Principal Supervisor View) -->
+              ${isAdmin ? `
+                <div class="hidden sm:flex items-center bg-blue-950/90 px-3 py-1.5 rounded-full border border-blue-700/60 shadow-lg">
+                  <span class="text-xs text-blue-300 font-bold mr-1.5 flex items-center gap-1">
+                    <i class="ph-bold ph-shield-check text-emerald-400"></i> Admin Switch:
+                  </span>
+                  <select id="role-switcher-select" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer">
+                    ${allUsers.map(u => `
+                      <option value="${u.id}" ${u.id === user.id ? 'selected' : ''} class="bg-slate-900 text-white">
+                        ${u.name} (${u.role.toUpperCase()}${u.classId ? ' - Class ' + u.classId : ''})
+                      </option>
+                    `).join('')}
+                  </select>
+                </div>
+              ` : `
+                <!-- Logged-In User Profile Chip -->
+                <div class="flex items-center gap-2 bg-slate-800/90 px-3 py-1 rounded-full border border-slate-700 text-xs text-white">
+                  <img src="${user.avatar}" class="w-6 h-6 rounded-full object-cover">
+                  <span class="font-bold hidden sm:inline">${user.name}</span>
+                  <span class="badge ${user.role === 'teacher' ? 'badge-info' : 'badge-success'} text-[10px] uppercase">
+                    ${user.role}
+                  </span>
+                </div>
+              `}
 
               <!-- Sign Out Button -->
               <button onclick="window.handleLogout()" class="btn bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs py-1.5 px-3">
@@ -258,6 +276,15 @@ export function renderNavbar() {
 }
 
 export function setupNavbarEvents() {
+  const roleSelect = document.getElementById('role-switcher-select');
+  if (roleSelect) {
+    roleSelect.addEventListener('change', (e) => {
+      const selectedUserId = e.target.value;
+      store.setCurrentUser(selectedUserId);
+      window.location.reload();
+    });
+  }
+
   const bellBtn = document.getElementById('notification-bell-btn');
   const dropdown = document.getElementById('notifications-dropdown');
   if (bellBtn && dropdown) {
