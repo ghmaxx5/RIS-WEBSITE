@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v3.3 Principal Session Persistence)
+// RIS School — Central State Store (v3.4 Admin PIN 1612 Update)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v3.0';
@@ -69,10 +69,10 @@ class Store {
     const targetUser = this.data.users.find(u => u.id === userId);
     if (!targetUser) return { success: false, error: "User profile not found." };
 
-    // Authentic Admin Login requires PIN 8888
+    // Authentic Admin Login requires PIN 1612
     if (targetUser.role === 'admin' && !this.adminSessionActive) {
-      if (adminPin !== '8888') {
-        return { success: false, error: "Security Verification Failed: Incorrect Admin PIN! Enter PIN 8888." };
+      if (adminPin !== '1612') {
+        return { success: false, error: "Security Verification Failed: Incorrect Admin PIN! Enter PIN 1612." };
       }
       this.adminSessionActive = true;
       localStorage.setItem('ris_admin_session_active', 'true');

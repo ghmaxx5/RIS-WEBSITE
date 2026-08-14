@@ -1,4 +1,4 @@
-// RIS School — Clean Data Store & User Registration Base (v3.1)
+// RIS School — Clean Data Store & User Registration Base (v3.4)
 
 export const initialMockData = {
   school: {
@@ -6,7 +6,7 @@ export const initialMockData = {
     term: "Academic Session 2026-2027",
     currentDate: new Date().toISOString().split('T')[0],
     teacherPasscode: "RIS2026",
-    adminPin: "8888"
+    adminPin: "1612"
   },
   
   // Default Admin account; Teachers and Students join via Secured Registration!
@@ -21,7 +21,6 @@ export const initialMockData = {
     }
   ],
 
-  // Classes restricted strictly to 8-A and 8-B
   classes: [
     { id: "8A", name: "Class 8-A", grade: "8", section: "A" },
     { id: "8B", name: "Class 8-B", grade: "8", section: "B" }

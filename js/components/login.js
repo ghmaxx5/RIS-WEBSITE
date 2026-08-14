@@ -1,4 +1,4 @@
-// RIS School — Production Login & Security Portal Component
+// RIS School — Production Login & Security Portal Component (Admin PIN 1612)
 import { store } from '../store.js';
 
 export function renderLogin() {
@@ -103,7 +103,7 @@ export function renderLogin() {
           </div>
         </div>
 
-        <!-- 3. ADMIN / PRINCIPAL ENTRY (PIN Protected) -->
+        <!-- 3. ADMIN / PRINCIPAL ENTRY (PIN 1612 Protected) -->
         <div class="glass-card p-6 flex flex-col justify-between space-y-4 border-2 border-rose-500/20 hover:border-rose-500/50">
           <div class="space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl font-bold">
@@ -112,13 +112,13 @@ export function renderLogin() {
             <div>
               <h3 class="text-xl font-bold text-slate-900 dark:text-white font-heading">Admin / Principal</h3>
               <p class="text-xs text-slate-500 mt-1">
-                Full school management. Security PIN required.
+                Full school management. Enter Security PIN (1612).
               </p>
             </div>
 
             <div>
               <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Admin Security PIN</label>
-              <input type="password" id="login-admin-pin" placeholder="Enter PIN (8888)" class="form-input text-xs font-mono">
+              <input type="password" id="login-admin-pin" placeholder="Enter PIN (1612)" class="form-input text-xs font-mono">
             </div>
           </div>
 
