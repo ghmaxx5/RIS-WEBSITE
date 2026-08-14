@@ -1,9 +1,9 @@
-// RIS School — Notices Component (Class 8A & 8B Scoped)
+// RIS School — Notices Component (Strict Student Deletion Lock)
 import { store } from '../store.js';
 
 export function renderNotices() {
   const user = store.getCurrentUser();
-  const isTeacherOrAdmin = user.role === 'teacher' || user.role === 'admin';
+  const isTeacherOrAdmin = user && user.role !== 'student' && (user.role === 'teacher' || user.role === 'admin' || store.isAdminSessionActive());
   const notices = store.getNotices();
 
   return `
@@ -48,61 +48,64 @@ export function renderNotices() {
 
     </div>
 
-    <!-- CREATE NOTICE MODAL -->
-    <div id="create-notice-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-      <div class="glass-card bg-white dark:bg-slate-900 w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-4">
-        <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading flex items-center gap-2">
-            <i class="ph-bold ph-megaphone text-amber-500"></i> Broadcast Announcement
-          </h3>
-          <button onclick="window.closeNoticeModal()" class="text-slate-400 text-xl font-bold">&times;</button>
+    <!-- CREATE NOTICE MODAL (TEACHERS & ADMINS ONLY) -->
+    ${isTeacherOrAdmin ? `
+      <div id="create-notice-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+        <div class="glass-card bg-white dark:bg-slate-900 w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading flex items-center gap-2">
+              <i class="ph-bold ph-megaphone text-amber-500"></i> Broadcast Announcement
+            </h3>
+            <button onclick="window.closeNoticeModal()" class="text-slate-400 text-xl font-bold">&times;</button>
+          </div>
+
+          <form id="create-notice-form" onsubmit="window.handleCreateNotice(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Announcement Title</label>
+              <input type="text" name="title" placeholder="e.g. Class 8-A Morning Test Rescheduled" class="form-input" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Target Audience</label>
+                <select name="targetAudience" class="form-select font-bold" required>
+                  <option value="Whole School">Whole School</option>
+                  <option value="8A">Class 8-A</option>
+                  <option value="8B">Class 8-B</option>
+                  <option value="Staff Only">Staff Only</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Priority Level</label>
+                <select name="priority" class="form-select" required>
+                  <option value="normal">Normal</option>
+                  <option value="important">Important</option>
+                  <option value="urgent">🚨 URGENT (High Alert)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Notice Content</label>
+              <textarea name="content" rows="4" placeholder="Write full details of the notice here..." class="form-textarea" required></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <button type="button" onclick="window.closeNoticeModal()" class="btn btn-outline">Cancel</button>
+              <button type="submit" class="btn btn-primary"><i class="ph-bold ph-paper-plane-tilt"></i> Broadcast Notice</button>
+            </div>
+          </form>
         </div>
-
-        <form id="create-notice-form" onsubmit="window.handleCreateNotice(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Announcement Title</label>
-            <input type="text" name="title" placeholder="e.g. Class 8-A Morning Test Rescheduled" class="form-input" required>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Target Audience</label>
-              <select name="targetAudience" class="form-select font-bold" required>
-                <option value="Whole School">Whole School</option>
-                <option value="8A">Class 8-A</option>
-                <option value="8B">Class 8-B</option>
-                <option value="Staff Only">Staff Only</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Priority Level</label>
-              <select name="priority" class="form-select" required>
-                <option value="normal">Normal</option>
-                <option value="important">Important</option>
-                <option value="urgent">🚨 URGENT (High Alert)</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Notice Content</label>
-            <textarea name="content" rows="4" placeholder="Write full details of the notice here..." class="form-textarea" required></textarea>
-          </div>
-
-          <div class="flex justify-end gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-            <button type="button" onclick="window.closeNoticeModal()" class="btn btn-outline">Cancel</button>
-            <button type="submit" class="btn btn-primary"><i class="ph-bold ph-paper-plane-tilt"></i> Broadcast Notice</button>
-          </div>
-        </form>
       </div>
-    </div>
+    ` : ''}
   `;
 }
 
 function renderNoticeCard(n, user) {
   const isUrgent = n.priority === 'urgent';
-  const canDelete = store.canDeleteNotice(n.id);
+  // Strictly check that students can NEVER see or use the delete button!
+  const canDelete = user && user.role !== 'student' && store.canDeleteNotice(n.id);
 
   return `
     <div class="glass-card p-6 space-y-3 ${isUrgent ? 'border-2 border-red-500/50 bg-red-950/10' : ''}">

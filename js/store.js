@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v3.7 Class Teacher & Unmarked Default Attendance)
+// RIS School — Central State Store (v4.0 Strict Notice Deletion Guard)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v3.7';
@@ -67,7 +67,9 @@ class Store {
   }
 
   isAdminSessionActive() {
-    return this.adminSessionActive || (this.getCurrentUser()?.role === 'admin');
+    const user = this.getCurrentUser();
+    if (user && user.role === 'student') return false; // Never active for student view
+    return this.adminSessionActive || (user?.role === 'admin');
   }
 
   setCurrentUser(userId, adminPin = null) {
@@ -215,7 +217,7 @@ class Store {
 
   addNotice(notice) {
     const user = this.getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return null;
+    if (!user || user.role === 'student') return null;
 
     const newNotice = {
       id: `notice-${Date.now()}`,
@@ -236,10 +238,11 @@ class Store {
 
   canDeleteNotice(noticeId) {
     const user = this.getCurrentUser();
-    if (!user) return false;
+    // STRICT LOCK: Students can NEVER delete any notice!
+    if (!user || user.role === 'student') return false;
     const notice = this.data.notices.find(n => n.id === noticeId);
     if (!notice) return false;
-    if (user.role === 'admin' || this.isAdminSessionActive()) return true;
+    if (user.role === 'admin') return true;
     if (user.role === 'teacher' && notice.authorId === user.id) return true;
     return false;
   }
@@ -274,7 +277,7 @@ class Store {
 
   saveStudentAttendance(classId, dateStr, records) {
     const user = this.getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return false;
+    if (!user || user.role === 'student') return false;
 
     if (!this.data.studentAttendance[classId]) {
       this.data.studentAttendance[classId] = {};
@@ -358,7 +361,7 @@ class Store {
 
   staffCheckIn(teacherId = null) {
     const user = this.getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return false;
+    if (!user || user.role === 'student') return false;
 
     const targetId = teacherId || this.currentUserId;
     const targetUser = this.data.users.find(u => u.id === targetId);
@@ -403,7 +406,7 @@ class Store {
 
   reviewLeaveRequest(leaveId, status, reviewerNote = "") {
     const user = this.getCurrentUser();
-    if (!user || (!this.isAdminSessionActive() && user.role !== 'admin')) return false;
+    if (!user || user.role === 'student' || user.role !== 'admin') return false;
 
     const leave = this.data.leaveRequests.find(l => l.id === leaveId);
     if (leave) {
