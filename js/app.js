@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v3.7 Class Teacher & Unmarked Default Attendance)
+// RIS School — Main Controller & Client Router (v3.8 Automatic Midnight Rollover)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -13,16 +13,50 @@ class App {
   constructor() {
     this.currentPage = 'login';
     this.attendanceState = {};
+    this.currentDateStr = new Date().toISOString().split('T')[0];
     this.init();
   }
 
   init() {
     this.setupRouter();
     this.setupGlobalHandlers();
+    this.setupMidnightRolloverCheck();
     this.render();
 
     store.subscribe(() => {
       this.render();
+    });
+  }
+
+  // --- AUTOMATIC 12:00 AM MIDNIGHT ROLLOVER DETECTOR ---
+  setupMidnightRolloverCheck() {
+    // Check every 30 seconds if calendar date has changed (midnight rollover)
+    setInterval(() => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (todayStr !== this.currentDateStr) {
+        this.currentDateStr = todayStr;
+        
+        // If teacher is currently on attendance view, auto-switch date input & reset to fresh unmarked sheet
+        const dateInput = document.getElementById('att-date-input');
+        if (dateInput) {
+          dateInput.value = todayStr;
+          this.loadAttendanceSheet();
+          this.showToast(`🌙 Midnight Rollover: Attendance register reset for new day (${todayStr})`, "info");
+        }
+      }
+    }, 30000);
+
+    // Also check on tab focus when teacher opens phone/browser in the morning
+    window.addEventListener('focus', () => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (todayStr !== this.currentDateStr) {
+        this.currentDateStr = todayStr;
+        const dateInput = document.getElementById('att-date-input');
+        if (dateInput) {
+          dateInput.value = todayStr;
+          this.loadAttendanceSheet();
+        }
+      }
     });
   }
 
@@ -316,7 +350,6 @@ class App {
       }
 
       if (this.attendanceState[studentId]) {
-        // Toggle status if tapped again
         if (this.attendanceState[studentId].status === status) {
           this.attendanceState[studentId].status = null;
         } else {
@@ -430,7 +463,6 @@ class App {
     this.attendanceState = {};
 
     students.forEach(s => {
-      // By default, if no attendance saved yet for today, status is NULL (Unmarked)!
       const status = existing && existing.records[s.id] ? existing.records[s.id].status : null;
       this.attendanceState[s.id] = { status, studentName: s.name, rollNo: s.rollNo, avatar: s.avatar };
     });
@@ -448,7 +480,6 @@ class App {
     const studentIds = Object.keys(this.attendanceState);
     const presentCount = studentIds.filter(id => this.attendanceState[id].status === 'present').length;
     const absentCount = studentIds.filter(id => this.attendanceState[id].status === 'absent').length;
-    const unmarkedCount = studentIds.filter(id => !this.attendanceState[id].status).length;
 
     const counterPresent = document.getElementById('count-present');
     const counterAbsent = document.getElementById('count-absent');
