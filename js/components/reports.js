@@ -1,4 +1,4 @@
-// RIS School — Attendance Analytics & Reports Component (Class 8A & 8B Only)
+// RIS School — Attendance Analytics & Reports Component (Dynamic Calculation)
 import { store } from '../store.js';
 
 export function renderReports() {
@@ -19,13 +19,13 @@ export function renderReports() {
             Class 8-A & 8-B Attendance Analytics
           </h1>
           <p class="text-slate-500 dark:text-slate-400 text-sm">
-            Morning presence trends, class breakdown, and absenteeism monitoring.
+            Real-time morning presence trends, class comparison averages, and absenteeism monitoring.
           </p>
         </div>
 
         <div class="flex items-center gap-3">
           <button onclick="window.print()" class="btn btn-primary">
-            <i class="ph-bold ph-printer text-lg"></i> Print Report
+            <i class="ph-bold ph-printer text-lg"></i> Print Official Report
           </button>
         </div>
       </div>
@@ -36,8 +36,8 @@ export function renderReports() {
         <div class="glass-card p-6 lg:col-span-2 space-y-4">
           <div class="flex items-center justify-between">
             <div>
-              <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">Class Attendance Comparison (%)</h3>
-              <p class="text-xs text-slate-500">Morning Roll Call Averages</p>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">Class Attendance Rate Comparison</h3>
+              <p class="text-xs text-slate-500">Calculated from saved daily registers</p>
             </div>
             <span class="badge badge-success">Target: 95%+</span>
           </div>
@@ -115,7 +115,7 @@ export function renderReports() {
                       <img src="${s.avatar}" class="w-7 h-7 rounded-full object-cover">
                       ${s.name}
                     </td>
-                    <td class="p-3 text-slate-600 dark:text-slate-400">Class ${s.classId} (${s.rollNo})</td>
+                    <td class="p-3 text-slate-600 dark:text-slate-400 font-bold">Class ${s.classId} (${s.rollNo})</td>
                     <td class="p-3 font-medium">${stats.totalDays}</td>
                     <td class="p-3 font-bold text-emerald-600">${stats.present}</td>
                     <td class="p-3 font-bold text-red-600">${stats.absent}</td>
@@ -145,13 +145,26 @@ export function initReportsChart() {
   const ctx = document.getElementById('class-attendance-chart');
   if (!ctx || typeof Chart === 'undefined') return;
 
+  // Dynamically calculate average presence rate for Class 8-A and Class 8-B
+  const students8A = store.getUsers('student').filter(s => s.classId === '8A');
+  const students8B = store.getUsers('student').filter(s => s.classId === '8B');
+
+  const getAvg = (list) => {
+    if (list.length === 0) return 100;
+    const sum = list.reduce((acc, s) => acc + store.getStudentStats(s.id).percentage, 0);
+    return Math.round((sum / list.length) * 10) / 10;
+  };
+
+  const avg8A = getAvg(students8A);
+  const avg8B = getAvg(students8B);
+
   new Chart(ctx, {
     type: 'bar',
     data: {
       labels: ['Class 8-A', 'Class 8-B'],
       datasets: [{
-        label: 'Attendance Rate (%)',
-        data: [96.5, 95.0],
+        label: 'Average Presence Rate (%)',
+        data: [avg8A, avg8B],
         backgroundColor: [
           'rgba(37, 99, 235, 0.85)',
           'rgba(5, 150, 105, 0.85)'
@@ -164,7 +177,7 @@ export function initReportsChart() {
       maintainAspectRatio: false,
       scales: {
         y: {
-          min: 80,
+          min: 50,
           max: 100,
           ticks: { callback: v => v + '%' }
         }
