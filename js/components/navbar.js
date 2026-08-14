@@ -1,13 +1,12 @@
-// RIS School — Navbar & Navigation Header Component (With Teacher Security Passcode)
+// RIS School — Navbar & Navigation Header Component (With Sign Out Security)
 import { store } from '../store.js';
 import { db } from '../db.js';
 
 export function renderNavbar() {
   const user = store.getCurrentUser();
-  const allUsers = store.getUsers();
   const notices = store.getNotices();
   
-  const unreadNotices = notices.filter(n => !n.readBy.includes(user.id));
+  const unreadNotices = user ? notices.filter(n => !n.readBy.includes(user.id)) : [];
   const unreadCount = unreadNotices.length;
 
   return `
@@ -16,13 +15,13 @@ export function renderNavbar() {
         <div class="flex items-center justify-between h-16">
           
           <!-- Brand Logo & Title -->
-          <div class="flex items-center gap-3 cursor-pointer" onclick="window.router.navigate('dashboard')">
+          <div class="flex items-center gap-3 cursor-pointer" onclick="window.router.navigate('${user ? 'dashboard' : 'login'}')">
             <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
               <i class="ph-bold ph-graduation-cap text-2xl"></i>
             </div>
             <div>
               <div class="font-extrabold text-lg tracking-tight leading-none text-white font-heading">RIS SCHOOL</div>
-              <div class="text-xs text-blue-200 font-medium">Class 8-A & 8-B Portal</div>
+              <div class="text-xs text-blue-200 font-medium">Rose International School</div>
             </div>
           </div>
 
@@ -41,53 +40,64 @@ export function renderNavbar() {
               <span>+ Join App</span>
             </button>
 
-            <!-- Active User Profile Switcher -->
-            <div class="hidden sm:flex items-center bg-slate-800/90 px-3 py-1.5 rounded-full border border-slate-700">
-              <span class="text-xs text-slate-400 font-medium mr-2">Profile:</span>
-              <select id="role-switcher-select" class="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer">
-                ${allUsers.map(u => `
-                  <option value="${u.id}" ${u.id === user.id ? 'selected' : ''} class="bg-slate-900 text-white">
-                    ${u.name} (${u.role.toUpperCase()}${u.classId ? ' - Class ' + u.classId : ''})
-                  </option>
-                `).join('')}
-              </select>
-            </div>
+            ${user ? `
+              <!-- Logged-In User Profile Chip -->
+              <div class="flex items-center gap-2 bg-slate-800/90 px-3 py-1 rounded-full border border-slate-700 text-xs text-white">
+                <img src="${user.avatar}" class="w-6 h-6 rounded-full object-cover">
+                <span class="font-bold hidden sm:inline">${user.name}</span>
+                <span class="badge ${user.role === 'admin' ? 'badge-danger' : (user.role === 'teacher' ? 'badge-info' : 'badge-success')} text-[10px] uppercase">
+                  ${user.role}
+                </span>
+              </div>
 
-            <!-- Notification Bell Icon -->
-            <div class="relative">
-              <button id="notification-bell-btn" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition relative">
-                <i class="ph-bold ph-bell text-xl"></i>
-                ${unreadCount > 0 ? `
-                  <span class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-extrabold flex items-center justify-center animate-bounce">
-                    ${unreadCount}
-                  </span>
-                ` : ''}
+              <!-- Sign Out Button -->
+              <button onclick="window.handleLogout()" class="btn bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs py-1.5 px-3">
+                <i class="ph-bold ph-sign-out"></i>
+                <span class="hidden sm:inline">Sign Out</span>
               </button>
+            ` : `
+              <!-- Sign In Trigger -->
+              <button onclick="window.router.navigate('login')" class="btn btn-primary text-xs py-1.5 px-3">
+                <i class="ph-bold ph-sign-in"></i> Sign In
+              </button>
+            `}
 
-              <!-- Notifications Dropdown Box -->
-              <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 glass-card bg-slate-900/95 border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-50">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
-                  <div class="font-bold text-sm flex items-center gap-2">
-                    <i class="ph-bold ph-bell-ringing text-blue-400"></i> Announcements Center
-                  </div>
-                  <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-semibold">${unreadCount} Unread</span>
-                </div>
-                <div class="max-h-72 overflow-y-auto space-y-2 pr-1">
-                  ${notices.length === 0 ? `<div class="text-xs text-slate-400">No active announcements.</div>` : ''}
-                  ${notices.slice(0, 5).map(n => `
-                    <div class="p-3 rounded-xl ${n.readBy.includes(user.id) ? 'bg-slate-800/40' : 'bg-blue-950/50 border border-blue-800/50'} text-xs cursor-pointer hover:bg-slate-800/80 transition" onclick="window.markNoticeRead('${n.id}')">
-                      <div class="flex items-center justify-between mb-1">
-                        <span class="font-bold text-white flex items-center gap-1">
-                          ${n.priority === 'urgent' ? '<span class="text-red-400 font-extrabold">🚨 URGENT</span>' : ''}
-                          ${n.title}
-                        </span>
-                      </div>
-                      <p class="text-slate-300 line-clamp-2">${n.content}</p>
+            <!-- Notification Bell Icon (If logged in) -->
+            ${user ? `
+              <div class="relative">
+                <button id="notification-bell-btn" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition relative">
+                  <i class="ph-bold ph-bell text-xl"></i>
+                  ${unreadCount > 0 ? `
+                    <span class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs font-extrabold flex items-center justify-center animate-bounce">
+                      ${unreadCount}
+                    </span>
+                  ` : ''}
+                </button>
+
+                <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 sm:w-96 glass-card bg-slate-900/95 border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-50">
+                  <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                    <div class="font-bold text-sm flex items-center gap-2">
+                      <i class="ph-bold ph-bell-ringing text-blue-400"></i> Announcements Center
                     </div>
-                  `).join('')}
+                    <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-semibold">${unreadCount} Unread</span>
+                  </div>
+                  <div class="max-h-72 overflow-y-auto space-y-2 pr-1">
+                    ${notices.length === 0 ? `<div class="text-xs text-slate-400">No active announcements.</div>` : ''}
+                    ${notices.slice(0, 5).map(n => `
+                      <div class="p-3 rounded-xl ${n.readBy.includes(user.id) ? 'bg-slate-800/40' : 'bg-blue-950/50 border border-blue-800/50'} text-xs cursor-pointer hover:bg-slate-800/80 transition" onclick="window.markNoticeRead('${n.id}')">
+                        <div class="flex items-center justify-between mb-1">
+                          <span class="font-bold text-white flex items-center gap-1">
+                            ${n.priority === 'urgent' ? '<span class="text-red-400 font-extrabold">🚨 URGENT</span>' : ''}
+                            ${n.title}
+                          </span>
+                        </div>
+                        <p class="text-slate-300 line-clamp-2">${n.content}</p>
+                      </div>
+                    `).join('')}
+                  </div>
                 </div>
               </div>
-            </div>
+            ` : ''}
 
             <!-- Dark / Light Theme Toggle -->
             <button id="theme-toggle-btn" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition">
@@ -97,30 +107,32 @@ export function renderNavbar() {
           </div>
         </div>
 
-        <!-- Main Navigation Sub-Bar (Homework Removed) -->
-        <nav class="flex items-center space-x-1 py-2 overflow-x-auto border-t border-slate-800">
-          <a href="#dashboard" onclick="window.router.navigate('dashboard')" class="nav-link text-slate-300 hover:text-white" id="nav-dashboard">
-            <i class="ph-bold ph-squares-four text-lg"></i>
-            <span>Dashboard</span>
-          </a>
-          <a href="#notices" onclick="window.router.navigate('notices')" class="nav-link text-slate-300 hover:text-white" id="nav-notices">
-            <i class="ph-bold ph-megaphone text-lg"></i>
-            <span>Notice Board</span>
-            ${unreadCount > 0 ? `<span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>` : ''}
-          </a>
-          <a href="#student-attendance" onclick="window.router.navigate('student-attendance')" class="nav-link text-slate-300 hover:text-white" id="nav-student-attendance">
-            <i class="ph-bold ph-user-check text-lg"></i>
-            <span>Morning Attendance</span>
-          </a>
-          <a href="#staff-attendance" onclick="window.router.navigate('staff-attendance')" class="nav-link text-slate-300 hover:text-white" id="nav-staff-attendance">
-            <i class="ph-bold ph-identification-card text-lg"></i>
-            <span>Staff & Leaves</span>
-          </a>
-          <a href="#reports" onclick="window.router.navigate('reports')" class="nav-link text-slate-300 hover:text-white" id="nav-reports">
-            <i class="ph-bold ph-chart-bar text-lg"></i>
-            <span>Analytics</span>
-          </a>
-        </nav>
+        <!-- Main Navigation Sub-Bar (If logged in) -->
+        ${user ? `
+          <nav class="flex items-center space-x-1 py-2 overflow-x-auto border-t border-slate-800">
+            <a href="#dashboard" onclick="window.router.navigate('dashboard')" class="nav-link text-slate-300 hover:text-white" id="nav-dashboard">
+              <i class="ph-bold ph-squares-four text-lg"></i>
+              <span>Dashboard</span>
+            </a>
+            <a href="#notices" onclick="window.router.navigate('notices')" class="nav-link text-slate-300 hover:text-white" id="nav-notices">
+              <i class="ph-bold ph-megaphone text-lg"></i>
+              <span>Notice Board</span>
+              ${unreadCount > 0 ? `<span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>` : ''}
+            </a>
+            <a href="#student-attendance" onclick="window.router.navigate('student-attendance')" class="nav-link text-slate-300 hover:text-white" id="nav-student-attendance">
+              <i class="ph-bold ph-user-check text-lg"></i>
+              <span>Morning Attendance</span>
+            </a>
+            <a href="#staff-attendance" onclick="window.router.navigate('staff-attendance')" class="nav-link text-slate-300 hover:text-white" id="nav-staff-attendance">
+              <i class="ph-bold ph-identification-card text-lg"></i>
+              <span>Staff & Leaves</span>
+            </a>
+            <a href="#reports" onclick="window.router.navigate('reports')" class="nav-link text-slate-300 hover:text-white" id="nav-reports">
+              <i class="ph-bold ph-chart-bar text-lg"></i>
+              <span>Analytics</span>
+            </a>
+          </nav>
+        ` : ''}
       </div>
     </header>
 
@@ -220,7 +232,7 @@ export function renderNavbar() {
             </div>
           </div>
 
-          <!-- STUDENT CLASS SELECTION (ONLY 8A and 8B) -->
+          <!-- STUDENT CLASS SELECTION -->
           <div id="reg-student-fields" class="space-y-3">
             <div>
               <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Class Section</label>
@@ -246,28 +258,6 @@ export function renderNavbar() {
 }
 
 export function setupNavbarEvents() {
-  const roleSelect = document.getElementById('role-switcher-select');
-  if (roleSelect) {
-    roleSelect.addEventListener('change', (e) => {
-      const selectedUserId = e.target.value;
-      const targetUser = store.getUsers().find(u => u.id === selectedUserId);
-
-      // Security check for Admin PIN
-      if (targetUser && targetUser.role === 'admin' && selectedUserId !== 'admin-1') {
-        const pin = prompt("Admin Security Verification: Enter Admin PIN (8888):");
-        const res = store.setCurrentUser(selectedUserId, pin);
-        if (!res.success) {
-          alert(res.error);
-          window.location.reload();
-          return;
-        }
-      } else {
-        store.setCurrentUser(selectedUserId);
-      }
-      window.location.reload();
-    });
-  }
-
   const bellBtn = document.getElementById('notification-bell-btn');
   const dropdown = document.getElementById('notifications-dropdown');
   if (bellBtn && dropdown) {

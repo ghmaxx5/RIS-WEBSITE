@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v3.0 Security & Simplification)
+// RIS School — Central State Store (v3.2 Security Gate)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v3.0';
@@ -6,7 +6,7 @@ const STORAGE_KEY = 'ris_school_app_data_v3.0';
 class Store {
   constructor() {
     this.data = this.loadData();
-    this.currentUserId = localStorage.getItem('ris_current_user_id') || 'admin-1';
+    this.currentUserId = localStorage.getItem('ris_current_user_id') || null;
     this.listeners = [];
   }
 
@@ -46,33 +46,43 @@ class Store {
 
   resetStore() {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('ris_current_user_id');
     this.data = JSON.parse(JSON.stringify(initialMockData));
+    this.currentUserId = null;
     this.saveData();
   }
 
-  // --- SECURE USER REGISTRATION ---
+  // --- USER AUTH & SECURITY GATE ---
   getCurrentUser() {
-    return this.data.users.find(u => u.id === this.currentUserId) || this.data.users[0];
+    if (!this.currentUserId) return null; // Logged out state
+    return this.data.users.find(u => u.id === this.currentUserId) || null;
   }
 
   setCurrentUser(userId, adminPin = null) {
     const targetUser = this.data.users.find(u => u.id === userId);
-    if (targetUser && targetUser.role === 'admin' && userId !== 'admin-1') {
+    if (!targetUser) return { success: false, error: "User profile not found." };
+
+    if (targetUser.role === 'admin') {
       if (adminPin !== '8888') {
-        return { success: false, error: "Incorrect Admin PIN! Admin access requires security PIN 8888." };
+        return { success: false, error: "Security Verification Failed: Incorrect Admin PIN! Enter PIN 8888." };
       }
     }
 
     this.currentUserId = userId;
     localStorage.setItem('ris_current_user_id', userId);
     this.notifyListeners();
-    return { success: true };
+    return { success: true, user: targetUser };
+  }
+
+  logout() {
+    this.currentUserId = null;
+    localStorage.removeItem('ris_current_user_id');
+    this.notifyListeners();
   }
 
   registerUser(userData) {
     const isTeacher = userData.role === 'teacher';
 
-    // Verify Teacher Security Passcode
     if (isTeacher) {
       const correctPasscode = this.data.school.teacherPasscode || "RIS2026";
       if (!userData.teacherPasscode || userData.teacherPasscode.trim() !== correctPasscode) {
@@ -98,7 +108,7 @@ class Store {
     const newUser = {
       id: newId,
       name: userData.name,
-      role: userData.role, // 'teacher' or 'student' strictly
+      role: userData.role,
       email: userData.email,
       avatar: isTeacher ? teacherAvatars[Math.floor(Math.random() * teacherAvatars.length)] : studentAvatars[Math.floor(Math.random() * studentAvatars.length)],
       title: isTeacher ? `Teacher — Class ${userData.homeroomClass || 'Subject'}` : `Student — Class ${userData.classId}`,
@@ -121,7 +131,7 @@ class Store {
     if (userId === 'admin-1') return false;
     this.data.users = this.data.users.filter(u => u.id !== userId);
     if (this.currentUserId === userId) {
-      this.setCurrentUser('admin-1');
+      this.logout();
     } else {
       this.saveData();
     }
@@ -134,7 +144,7 @@ class Store {
   }
 
   getClasses() {
-    return this.data.classes; // Strictly 8A and 8B
+    return this.data.classes;
   }
 
   getClass(classId) {
@@ -145,12 +155,12 @@ class Store {
     return this.data.subjects;
   }
 
-  // --- NOTICE BOARD (Author Deletion Logic) ---
+  // --- NOTICE BOARD ---
   getNotices(filters = {}) {
     let list = [...this.data.notices];
     const user = this.getCurrentUser();
 
-    if (user.role === 'student') {
+    if (user && user.role === 'student') {
       list = list.filter(n => 
         n.targetAudience === 'Whole School' || 
         n.targetAudience === user.classId || 
@@ -167,8 +177,7 @@ class Store {
 
   addNotice(notice) {
     const user = this.getCurrentUser();
-    // Security check: Only Admin or Teachers can post notices!
-    if (user.role !== 'admin' && user.role !== 'teacher') return null;
+    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return null;
 
     const newNotice = {
       id: `notice-${Date.now()}`,
@@ -189,10 +198,11 @@ class Store {
 
   canDeleteNotice(noticeId) {
     const user = this.getCurrentUser();
+    if (!user) return false;
     const notice = this.data.notices.find(n => n.id === noticeId);
     if (!notice) return false;
-    if (user.role === 'admin') return true; // Admin can delete ANY notice
-    if (user.role === 'teacher' && notice.authorId === user.id) return true; // Teacher can delete ONLY their own notice
+    if (user.role === 'admin') return true;
+    if (user.role === 'teacher' && notice.authorId === user.id) return true;
     return false;
   }
 
@@ -207,6 +217,7 @@ class Store {
 
   markNoticeRead(noticeId) {
     const user = this.getCurrentUser();
+    if (!user) return;
     const notice = this.data.notices.find(n => n.id === noticeId);
     if (notice && !notice.readBy.includes(user.id)) {
       notice.readBy.push(user.id);
@@ -214,7 +225,7 @@ class Store {
     }
   }
 
-  // --- MORNING STUDENT ATTENDANCE (Class 8A & 8B, P/A Only) ---
+  // --- MORNING ATTENDANCE ---
   getStudentAttendance(classId, dateStr) {
     const classRecords = this.data.studentAttendance[classId];
     if (classRecords && classRecords[dateStr]) {
@@ -225,8 +236,7 @@ class Store {
 
   saveStudentAttendance(classId, dateStr, records) {
     const user = this.getCurrentUser();
-    // Security check: Only Admin or Teachers can mark attendance!
-    if (user.role !== 'admin' && user.role !== 'teacher') return false;
+    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return false;
 
     if (!this.data.studentAttendance[classId]) {
       this.data.studentAttendance[classId] = {};
@@ -310,7 +320,7 @@ class Store {
 
   staffCheckIn(teacherId = null) {
     const user = this.getCurrentUser();
-    if (user.role !== 'admin' && user.role !== 'teacher') return false;
+    if (!user || (user.role !== 'admin' && user.role !== 'teacher')) return false;
 
     const targetId = teacherId || this.currentUserId;
     const targetUser = this.data.users.find(u => u.id === targetId);
@@ -333,7 +343,7 @@ class Store {
 
   submitLeaveRequest(leave) {
     const user = this.getCurrentUser();
-    if (user.role !== 'teacher') return null;
+    if (!user || user.role !== 'teacher') return null;
 
     const newLeave = {
       id: `leave-${Date.now()}`,
@@ -355,7 +365,7 @@ class Store {
 
   reviewLeaveRequest(leaveId, status, reviewerNote = "") {
     const user = this.getCurrentUser();
-    if (user.role !== 'admin') return false; // ONLY ADMIN CAN APPROVE LEAVES
+    if (!user || user.role !== 'admin') return false;
 
     const leave = this.data.leaveRequests.find(l => l.id === leaveId);
     if (leave) {

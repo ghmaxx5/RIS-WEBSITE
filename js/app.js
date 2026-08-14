@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v3.0 Security & Simplification)
+// RIS School — Main Controller & Client Router (v3.2 Security Gate)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -7,10 +7,11 @@ import { renderNotices } from './components/notices.js';
 import { renderStudentAttendance } from './components/studentAttendance.js';
 import { renderStaffAttendance } from './components/staffAttendance.js';
 import { renderReports, initReportsChart } from './components/reports.js';
+import { renderLogin } from './components/login.js';
 
 class App {
   constructor() {
-    this.currentPage = 'dashboard';
+    this.currentPage = 'login';
     this.attendanceState = {};
     this.init();
   }
@@ -28,21 +29,34 @@ class App {
   setupRouter() {
     window.router = {
       navigate: (page) => {
-        this.currentPage = page;
-        window.location.hash = page;
+        const user = store.getCurrentUser();
+        // Protect all pages behind Login if logged out
+        if (!user && page !== 'login') {
+          this.currentPage = 'login';
+          window.location.hash = 'login';
+        } else {
+          this.currentPage = page;
+          window.location.hash = page;
+        }
         this.render();
       }
     };
 
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash && hash !== this.currentPage) {
+      const user = store.getCurrentUser();
+      if (!user && hash !== 'login') {
+        this.currentPage = 'login';
+      } else if (hash) {
         this.currentPage = hash;
-        this.render();
       }
+      this.render();
     });
 
-    if (window.location.hash) {
+    const user = store.getCurrentUser();
+    if (!user) {
+      this.currentPage = 'login';
+    } else if (window.location.hash) {
       this.currentPage = window.location.hash.replace('#', '');
     }
   }
@@ -50,6 +64,7 @@ class App {
   render() {
     const navbarContainer = document.getElementById('navbar-container');
     const mainContainer = document.getElementById('main-content-container');
+    const user = store.getCurrentUser();
 
     if (navbarContainer) {
       navbarContainer.innerHTML = renderNavbar();
@@ -61,6 +76,11 @@ class App {
     if (activeNav) activeNav.classList.add('active');
 
     if (mainContainer) {
+      if (!user || this.currentPage === 'login') {
+        mainContainer.innerHTML = renderLogin();
+        return;
+      }
+
       switch (this.currentPage) {
         case 'notices':
           mainContainer.innerHTML = renderNotices();
@@ -85,6 +105,45 @@ class App {
   }
 
   setupGlobalHandlers() {
+
+    // --- LOGIN & AUTHENTICATION HANDLERS ---
+    window.handleStudentLogin = () => {
+      const select = document.getElementById('login-student-select');
+      if (select && select.value) {
+        store.setCurrentUser(select.value);
+        window.router.navigate('dashboard');
+        this.showToast("Signed in as Student!", "success");
+      }
+    };
+
+    window.handleTeacherLogin = () => {
+      const select = document.getElementById('login-teacher-select');
+      if (select && select.value) {
+        store.setCurrentUser(select.value);
+        window.router.navigate('dashboard');
+        this.showToast("Signed in as Teacher!", "success");
+      }
+    };
+
+    window.handleAdminLogin = () => {
+      const pinInput = document.getElementById('login-admin-pin');
+      const pin = pinInput ? pinInput.value : '';
+      const res = store.setCurrentUser('admin-1', pin);
+
+      if (res.success) {
+        window.router.navigate('dashboard');
+        this.showToast("Admin Authenticated Successfully!", "success");
+      } else {
+        alert(res.error);
+        this.showToast(res.error, "danger");
+      }
+    };
+
+    window.handleLogout = () => {
+      store.logout();
+      window.router.navigate('login');
+      this.showToast("Signed out safely.", "info");
+    };
 
     // --- CLOUD DB CONFIG MODAL HANDLERS ---
     window.openDbModal = () => {
@@ -158,7 +217,7 @@ class App {
 
       window.closeRegistrationModal();
       this.showToast(`Welcome ${result.user.name}! Registered as ${result.user.role.toUpperCase()}.`, "success");
-      this.render();
+      window.router.navigate('dashboard');
     };
 
     window.handleDeleteUser = (userId) => {
@@ -231,7 +290,7 @@ class App {
 
     window.markAllPresent = () => {
       const currentUser = store.getCurrentUser();
-      if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
         this.showToast("Permission denied: Only Teachers & Admins can mark attendance.", "danger");
         return;
       }
@@ -245,7 +304,7 @@ class App {
 
     window.setStudentStatus = (studentId, status) => {
       const currentUser = store.getCurrentUser();
-      if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
         this.showToast("Permission denied: Students cannot edit attendance.", "danger");
         return;
       }
@@ -363,7 +422,7 @@ class App {
     if (!container) return;
 
     const currentUser = store.getCurrentUser();
-    const isTeacherOrAdmin = currentUser.role === 'teacher' || currentUser.role === 'admin';
+    const isTeacherOrAdmin = currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin');
 
     const studentIds = Object.keys(this.attendanceState);
     const presentCount = studentIds.filter(id => this.attendanceState[id].status === 'present').length;
