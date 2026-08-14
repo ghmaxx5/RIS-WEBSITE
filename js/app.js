@@ -1,0 +1,456 @@
+// RIS School — Main Controller & Client Router (v3.0 Security & Simplification)
+import { store } from './store.js';
+import { db } from './db.js';
+import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
+import { renderDashboard } from './components/dashboard.js';
+import { renderNotices } from './components/notices.js';
+import { renderStudentAttendance } from './components/studentAttendance.js';
+import { renderStaffAttendance } from './components/staffAttendance.js';
+import { renderReports, initReportsChart } from './components/reports.js';
+
+class App {
+  constructor() {
+    this.currentPage = 'dashboard';
+    this.attendanceState = {};
+    this.init();
+  }
+
+  init() {
+    this.setupRouter();
+    this.setupGlobalHandlers();
+    this.render();
+
+    store.subscribe(() => {
+      this.render();
+    });
+  }
+
+  setupRouter() {
+    window.router = {
+      navigate: (page) => {
+        this.currentPage = page;
+        window.location.hash = page;
+        this.render();
+      }
+    };
+
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && hash !== this.currentPage) {
+        this.currentPage = hash;
+        this.render();
+      }
+    });
+
+    if (window.location.hash) {
+      this.currentPage = window.location.hash.replace('#', '');
+    }
+  }
+
+  render() {
+    const navbarContainer = document.getElementById('navbar-container');
+    const mainContainer = document.getElementById('main-content-container');
+
+    if (navbarContainer) {
+      navbarContainer.innerHTML = renderNavbar();
+      setupNavbarEvents();
+    }
+
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    const activeNav = document.getElementById(`nav-${this.currentPage}`);
+    if (activeNav) activeNav.classList.add('active');
+
+    if (mainContainer) {
+      switch (this.currentPage) {
+        case 'notices':
+          mainContainer.innerHTML = renderNotices();
+          break;
+        case 'student-attendance':
+          mainContainer.innerHTML = renderStudentAttendance();
+          this.loadAttendanceSheet();
+          break;
+        case 'staff-attendance':
+          mainContainer.innerHTML = renderStaffAttendance();
+          break;
+        case 'reports':
+          mainContainer.innerHTML = renderReports();
+          setTimeout(() => initReportsChart(), 50);
+          break;
+        case 'dashboard':
+        default:
+          mainContainer.innerHTML = renderDashboard();
+          break;
+      }
+    }
+  }
+
+  setupGlobalHandlers() {
+
+    // --- CLOUD DB CONFIG MODAL HANDLERS ---
+    window.openDbModal = () => {
+      document.getElementById('db-config-modal')?.classList.remove('hidden');
+    };
+    window.closeDbModal = () => {
+      document.getElementById('db-config-modal')?.classList.add('hidden');
+    };
+    window.handleSaveDbCredentials = (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const url = form.url.value;
+      const key = form.key.value;
+
+      db.saveConfig(url, key);
+      window.closeDbModal();
+
+      if (db.isConnected) {
+        this.showToast("Connected to Cloud Database! Real-time sync active.", "success");
+      } else if (url || key) {
+        this.showToast("Could not connect to Supabase. Check URL and Key.", "danger");
+      } else {
+        this.showToast("Switched to Local In-Browser Database mode.", "info");
+      }
+      this.render();
+    };
+
+    // --- SECURED USER REGISTRATION HANDLERS ---
+    window.openRegistrationModal = () => {
+      document.getElementById('registration-modal')?.classList.remove('hidden');
+    };
+    window.closeRegistrationModal = () => {
+      document.getElementById('registration-modal')?.classList.add('hidden');
+    };
+    window.toggleRegRoleFields = (role) => {
+      const teacherFields = document.getElementById('reg-teacher-fields');
+      const studentFields = document.getElementById('reg-student-fields');
+      if (role === 'teacher') {
+        teacherFields?.classList.remove('hidden');
+        studentFields?.classList.add('hidden');
+      } else {
+        teacherFields?.classList.add('hidden');
+        studentFields?.classList.remove('hidden');
+      }
+    };
+    window.handleUserRegistration = (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const role = form.role.value;
+      const name = form.name.value;
+      const email = form.email.value;
+
+      const result = store.registerUser({
+        role,
+        name,
+        email,
+        teacherPasscode: form.teacherPasscode?.value,
+        homeroomClass: form.homeroomClass?.value,
+        subjects: form.subjects?.value ? [form.subjects.value] : ["General"],
+        classId: form.classId?.value,
+        rollNo: form.rollNo?.value
+      });
+
+      if (!result.success) {
+        alert(result.error);
+        this.showToast(result.error, "danger");
+        return;
+      }
+
+      if (db.isConnected) db.saveUser(result.user);
+
+      window.closeRegistrationModal();
+      this.showToast(`Welcome ${result.user.name}! Registered as ${result.user.role.toUpperCase()}.`, "success");
+      this.render();
+    };
+
+    window.handleDeleteUser = (userId) => {
+      if (confirm("Are you sure you want to remove this user from the school portal?")) {
+        store.deleteUser(userId);
+        if (db.isConnected) db.deleteUser(userId);
+        this.showToast("User removed.", "warning");
+        this.render();
+      }
+    };
+
+    // --- NOTICE HANDLERS ---
+    window.openNoticeModal = () => {
+      document.getElementById('create-notice-modal')?.classList.remove('hidden');
+    };
+    window.closeNoticeModal = () => {
+      document.getElementById('create-notice-modal')?.classList.add('hidden');
+    };
+    window.handleCreateNotice = (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const newNotice = store.addNotice({
+        title: form.title.value,
+        targetAudience: form.targetAudience.value,
+        priority: form.priority.value,
+        content: form.content.value
+      });
+
+      if (!newNotice) {
+        this.showToast("Permission denied: Students cannot post announcements.", "danger");
+        return;
+      }
+
+      if (db.isConnected) db.saveNotice(newNotice);
+
+      window.closeNoticeModal();
+      this.showToast("Announcement published!", "success");
+    };
+
+    window.handleDeleteNotice = (noticeId) => {
+      if (confirm("Are you sure you want to delete this notice?")) {
+        const deleted = store.deleteNotice(noticeId);
+        if (deleted) {
+          if (db.isConnected) db.deleteNotice(noticeId);
+          this.showToast("Notice deleted.", "warning");
+        } else {
+          this.showToast("Permission denied: You can only delete notices you posted.", "danger");
+        }
+      }
+    };
+
+    window.filterNotices = (priority) => {
+      const container = document.getElementById('notices-feed-container');
+      const user = store.getCurrentUser();
+      const list = store.getNotices({ priority: priority === 'all' ? null : priority });
+      if (container) {
+        container.innerHTML = list.map(n => this.renderNoticeCardHtml(n, user)).join('');
+      }
+    };
+
+    window.markNoticeRead = (noticeId) => {
+      store.markNoticeRead(noticeId);
+      this.render();
+    };
+
+    // --- MORNING ATTENDANCE HANDLERS ---
+    window.loadAttendanceSheet = () => {
+      this.loadAttendanceSheet();
+    };
+
+    window.markAllPresent = () => {
+      const currentUser = store.getCurrentUser();
+      if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
+        this.showToast("Permission denied: Only Teachers & Admins can mark attendance.", "danger");
+        return;
+      }
+
+      Object.keys(this.attendanceState).forEach(studentId => {
+        this.attendanceState[studentId].status = 'present';
+      });
+      this.renderRosterRows();
+      this.showToast("All students marked Present!", "info");
+    };
+
+    window.setStudentStatus = (studentId, status) => {
+      const currentUser = store.getCurrentUser();
+      if (currentUser.role !== 'admin' && currentUser.role !== 'teacher') {
+        this.showToast("Permission denied: Students cannot edit attendance.", "danger");
+        return;
+      }
+
+      if (this.attendanceState[studentId]) {
+        this.attendanceState[studentId].status = status;
+        this.renderRosterRows();
+      }
+    };
+
+    window.saveAttendanceRegister = () => {
+      const classSelect = document.getElementById('att-class-select');
+      const dateInput = document.getElementById('att-date-input');
+
+      if (!classSelect || !dateInput) return;
+
+      const classId = classSelect.value;
+      const dateStr = dateInput.value;
+
+      const saved = store.saveStudentAttendance(classId, dateStr, this.attendanceState);
+      if (!saved) {
+        this.showToast("Permission denied: Only Teachers & Admins can save attendance.", "danger");
+        return;
+      }
+
+      if (db.isConnected) {
+        db.saveAttendance(classId, dateStr, "Daily Morning Register", store.getCurrentUser().name, this.attendanceState);
+      }
+      this.showToast(`Morning attendance for Class ${classId} saved!`, "success");
+    };
+
+    window.toggleAuditLogDrawer = () => {
+      document.getElementById('audit-log-drawer')?.classList.toggle('hidden');
+    };
+
+    // --- STAFF & LEAVE HANDLERS ---
+    window.toggleStaffCheckIn = (teacherId) => {
+      const checkedIn = store.staffCheckIn(teacherId);
+      this.showToast(checkedIn ? "Faculty checked in!" : "Faculty checked out!", "info");
+    };
+
+    window.openLeaveModal = () => {
+      document.getElementById('leave-request-modal')?.classList.remove('hidden');
+    };
+    window.closeLeaveModal = () => {
+      document.getElementById('leave-request-modal')?.classList.add('hidden');
+    };
+    window.handleCreateLeave = (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const newLeave = store.submitLeaveRequest({
+        leaveType: form.leaveType.value,
+        startDate: form.startDate.value,
+        endDate: form.endDate.value,
+        reason: form.reason.value
+      });
+
+      if (!newLeave) {
+        this.showToast("Permission denied: Only Teachers can submit leave applications.", "danger");
+        return;
+      }
+
+      window.closeLeaveModal();
+      this.showToast("Leave application submitted!", "success");
+    };
+
+    window.approveLeave = (leaveId) => {
+      const res = store.reviewLeaveRequest(leaveId, 'approved', 'Approved by Principal.');
+      if (res) this.showToast("Leave request approved!", "success");
+      else this.showToast("Permission denied: Admin approval required.", "danger");
+    };
+
+    window.rejectLeave = (leaveId) => {
+      const res = store.reviewLeaveRequest(leaveId, 'rejected', 'Rejected.');
+      if (res) this.showToast("Leave request rejected.", "warning");
+      else this.showToast("Permission denied: Admin approval required.", "danger");
+    };
+
+    window.filterReportsTable = () => {
+      const input = document.getElementById('report-search');
+      const filter = input ? input.value.toLowerCase() : '';
+      const table = document.getElementById('reports-table');
+      if (!table) return;
+      const tr = table.getElementsByTagName('tr');
+
+      for (let i = 1; i < tr.length; i++) {
+        const text = tr[i].textContent || tr[i].innerText;
+        tr[i].style.display = text.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+      }
+    };
+  }
+
+  loadAttendanceSheet() {
+    const classSelect = document.getElementById('att-class-select');
+    const dateInput = document.getElementById('att-date-input');
+    if (!classSelect || !dateInput) return;
+
+    const classId = classSelect.value;
+    const dateStr = dateInput.value;
+    const existing = store.getStudentAttendance(classId, dateStr);
+
+    const students = store.getUsers('student').filter(s => s.classId === classId);
+    this.attendanceState = {};
+
+    students.forEach(s => {
+      const status = existing && existing.records[s.id] ? existing.records[s.id].status : 'present';
+      this.attendanceState[s.id] = { status, studentName: s.name, rollNo: s.rollNo, avatar: s.avatar };
+    });
+
+    this.renderRosterRows();
+  }
+
+  renderRosterRows() {
+    const container = document.getElementById('attendance-roster-container');
+    if (!container) return;
+
+    const currentUser = store.getCurrentUser();
+    const isTeacherOrAdmin = currentUser.role === 'teacher' || currentUser.role === 'admin';
+
+    const studentIds = Object.keys(this.attendanceState);
+    const presentCount = studentIds.filter(id => this.attendanceState[id].status === 'present').length;
+    const absentCount = studentIds.filter(id => this.attendanceState[id].status === 'absent').length;
+
+    const counterPresent = document.getElementById('count-present');
+    const counterAbsent = document.getElementById('count-absent');
+    if (counterPresent) counterPresent.innerText = `${presentCount} Present`;
+    if (counterAbsent) counterAbsent.innerText = `${absentCount} Absent`;
+
+    if (studentIds.length === 0) {
+      container.innerHTML = `
+        <div class="p-8 text-center text-slate-400 space-y-2">
+          <i class="ph-bold ph-user-plus text-3xl text-emerald-500"></i>
+          <p class="font-bold text-sm text-slate-700 dark:text-slate-200">No students registered in this class section yet.</p>
+          <p class="text-xs text-slate-500">Click <strong>"+ Join App"</strong> in the top header to register a student for Class 8-A or 8-B!</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="divide-y divide-slate-200 dark:divide-slate-800">
+        ${studentIds.map(id => {
+          const s = this.attendanceState[id];
+          return `
+            <div class="py-3.5 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <img src="${s.avatar}" class="w-11 h-11 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div>
+                  <div class="font-extrabold text-sm text-slate-900 dark:text-white">${s.studentName}</div>
+                  <div class="text-xs text-slate-500 font-semibold">Roll No: ${s.rollNo || 'N/A'}</div>
+                </div>
+              </div>
+
+              ${isTeacherOrAdmin ? `
+                <div class="flex items-center gap-2">
+                  <button type="button" onclick="window.setStudentStatus('${id}', 'present')" 
+                          class="att-toggle-btn ${s.status === 'present' ? 'active-P' : ''}">
+                    <i class="ph-bold ph-check"></i> Present
+                  </button>
+                  <button type="button" onclick="window.setStudentStatus('${id}', 'absent')" 
+                          class="att-toggle-btn ${s.status === 'absent' ? 'active-A' : ''}">
+                    <i class="ph-bold ph-x"></i> Absent
+                  </button>
+                </div>
+              ` : `
+                <span class="badge ${s.status === 'present' ? 'badge-success' : 'badge-danger'} px-4 py-1.5 text-xs font-extrabold uppercase">
+                  ${s.status}
+                </span>
+              `}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3.5 rounded-2xl text-white font-bold text-sm shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-full ${
+      type === 'success' ? 'bg-emerald-600' : (type === 'warning' ? 'bg-amber-600' : (type === 'danger' ? 'bg-rose-600' : 'bg-blue-600'))
+    }`;
+    toast.innerHTML = `<i class="ph-bold ${type === 'success' ? 'ph-check-circle' : 'ph-info'} text-xl"></i> ${message}`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.classList.remove('translate-y-full'), 50);
+    setTimeout(() => {
+      toast.classList.add('translate-y-full');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  renderNoticeCardHtml(n, user) {
+    const canDelete = store.canDeleteNotice(n.id);
+    return `
+      <div class="glass-card p-6 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">${n.title}</h3>
+          ${canDelete ? `<button onclick="window.handleDeleteNotice('${n.id}')" class="btn btn-outline text-xs text-red-600">Delete</button>` : ''}
+        </div>
+        <p class="text-sm text-slate-700 dark:text-slate-200">${n.content}</p>
+      </div>
+    `;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.app = new App();
+});
