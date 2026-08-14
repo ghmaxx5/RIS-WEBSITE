@@ -1,7 +1,7 @@
-// RIS School — Central State Store (v3.4 Admin PIN 1612 Update)
+// RIS School — Central State Store (v3.6 Automatic 30-Student Seeder)
 import { initialMockData } from './mockData.js';
 
-const STORAGE_KEY = 'ris_school_app_data_v3.0';
+const STORAGE_KEY = 'ris_school_app_data_v3.6';
 
 class Store {
   constructor() {
@@ -15,11 +15,18 @@ class Store {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // If saved store has fewer than 15 students, re-seed with full 30-student roster!
+        const studentCount = parsed.users ? parsed.users.filter(u => u.role === 'student').length : 0;
+        if (studentCount >= 20) {
+          return parsed;
+        }
       }
     } catch (e) {
       console.warn("Initializing fresh store data", e);
     }
+    
+    // Seed fresh store with 30 students
     this.saveData(initialMockData);
     return JSON.parse(JSON.stringify(initialMockData));
   }
@@ -69,7 +76,6 @@ class Store {
     const targetUser = this.data.users.find(u => u.id === userId);
     if (!targetUser) return { success: false, error: "User profile not found." };
 
-    // Authentic Admin Login requires PIN 1612
     if (targetUser.role === 'admin' && !this.adminSessionActive) {
       if (adminPin !== '1612') {
         return { success: false, error: "Security Verification Failed: Incorrect Admin PIN! Enter PIN 1612." };
