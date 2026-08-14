@@ -1,4 +1,4 @@
-// RIS School — Navbar Component (With Mobile Navigation Drawer)
+// RIS School — Navbar Component (With Restored Dark/Light Theme Toggle)
 import { store } from '../store.js';
 import { db } from '../db.js';
 
@@ -27,10 +27,10 @@ export function renderNavbar() {
             </div>
           </div>
 
-          <!-- Desktop & Mobile Right Actions -->
+          <!-- Right Actions (DB, Join, Switcher, Theme, Notifications) -->
           <div class="flex items-center gap-2">
             
-            <!-- Cloud DB Connection Indicator (Hidden on tiny screens) -->
+            <!-- Cloud DB Connection Indicator -->
             <button onclick="window.openDbModal()" class="hidden md:flex btn ${db.isConnected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-300 border-slate-700'} text-[11px] px-2.5 py-1 rounded-full border items-center gap-1 font-semibold">
               <span class="w-2 h-2 rounded-full ${db.isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}"></span>
               <span>${db.isConnected ? 'Cloud DB' : 'DB Config'}</span>
@@ -47,7 +47,7 @@ export function renderNavbar() {
               ${isAdminActive ? `
                 <div class="hidden sm:flex items-center bg-blue-950/90 px-3 py-1 rounded-full border border-blue-700/60 shadow-lg">
                   <span class="text-xs text-blue-300 font-bold hidden lg:flex items-center gap-1 mr-1">
-                    <i class="ph-bold ph-shield-check text-emerald-400"></i> Admin Switch:
+                    <i class="ph-bold ph-shield-check text-emerald-400"></i> Principal Switch:
                   </span>
                   <select id="role-switcher-select" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer max-w-[140px] sm:max-w-none">
                     ${allUsers.map(u => `
@@ -64,7 +64,7 @@ export function renderNavbar() {
                   ` : ''}
                 </div>
               ` : `
-                <!-- REGULAR USER CHIP -->
+                <!-- REGULAR USER PROFILE CHIP -->
                 <div class="hidden sm:flex items-center gap-2 bg-slate-800/90 px-3 py-1 rounded-full border border-slate-700 text-xs text-white">
                   <img src="${user.avatar}" class="w-6 h-6 rounded-full object-cover">
                   <span class="font-bold hidden md:inline">${user.name}</span>
@@ -114,6 +114,12 @@ export function renderNavbar() {
                 <i class="ph-bold ph-sign-in"></i> Sign In
               </button>
             `}
+
+            <!-- DARK / LIGHT THEME TOGGLE BUTTON -->
+            <button id="theme-toggle-btn" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition" title="Toggle Dark/Light Mode">
+              <i class="ph-bold ph-moon-stars text-xl dark:hidden"></i>
+              <i class="ph-bold ph-sun text-xl hidden dark:block text-amber-400"></i>
+            </button>
 
             <!-- Mobile Menu Hamburger Button -->
             ${user ? `
@@ -345,7 +351,6 @@ export function setupNavbarEvents() {
     });
   }
 
-  // Mobile menu drawer toggle
   const mobileBtn = document.getElementById('mobile-menu-btn');
   const mobileMenu = document.getElementById('mobile-nav-menu');
   if (mobileBtn && mobileMenu) {
@@ -373,10 +378,12 @@ export function setupNavbarEvents() {
     });
   }
 
+  // Dark / Light Theme Toggle Listener
   const themeBtn = document.getElementById('theme-toggle-btn');
   if (themeBtn) {
     themeBtn.addEventListener('click', () => {
-      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('ris_theme_dark', isDark ? 'true' : 'false');
     });
   }
 }
