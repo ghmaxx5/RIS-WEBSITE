@@ -1,9 +1,10 @@
-// RIS School — Daily Morning Student Attendance Component (Mobile Optimized)
+// RIS School — Daily Morning Student Attendance Component (Strict Student Read-Only Lock)
 import { store } from '../store.js';
 
 export function renderStudentAttendance() {
   const user = store.getCurrentUser();
-  const isTeacherOrAdmin = store.isAdminSessionActive() || (user && (user.role === 'teacher' || user.role === 'admin'));
+  // Strictly enforce that students cannot mark attendance under any circumstances!
+  const isTeacherOrAdmin = user && user.role !== 'student' && (store.isAdminSessionActive() || user.role === 'teacher' || user.role === 'admin');
   const classes = store.getClasses();
   
   const defaultClassId = (user && (user.homeroomClass || user.classId)) || '8A';
@@ -23,7 +24,7 @@ export function renderStudentAttendance() {
               <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-200">Daily Academic Register</span>
               <h1 class="text-xl sm:text-3xl font-bold font-heading">Morning Attendance</h1>
               <p class="text-xs text-blue-100 mt-0.5">
-                Class 8-A and Class 8-B Morning Roll Call.
+                ${isTeacherOrAdmin ? 'Mark Present (P) or Absent (A) for Class 8-A and Class 8-B.' : 'Official Class 8-A and 8-B Morning Register (Read Only).'}
               </p>
             </div>
           </div>
@@ -54,7 +55,7 @@ export function renderStudentAttendance() {
 
         </div>
 
-        <!-- Fast Bulk Action Bar -->
+        <!-- Fast Bulk Action Bar (Hidden for Students) -->
         ${isTeacherOrAdmin ? `
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <div class="flex items-center gap-2">
@@ -68,7 +69,12 @@ export function renderStudentAttendance() {
               <span class="text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-full border border-rose-200" id="count-absent">0 Absent</span>
             </div>
           </div>
-        ` : ''}
+        ` : `
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs font-bold" id="att-summary-counters">
+            <span class="text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-full border border-emerald-200" id="count-present">0 Present</span>
+            <span class="text-rose-600 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-full border border-rose-200" id="count-absent">0 Absent</span>
+          </div>
+        `}
       </div>
 
       <!-- Student Attendance Roster Grid -->
@@ -78,7 +84,7 @@ export function renderStudentAttendance() {
             Class Roster & Roll Call
           </h3>
           <span class="text-[11px] text-slate-500 hidden sm:inline">
-            Tap P or A to toggle attendance status.
+            ${isTeacherOrAdmin ? "Tap P or A to toggle attendance status." : "Read-Only View for Students"}
           </span>
         </div>
 
@@ -95,7 +101,7 @@ export function renderStudentAttendance() {
         ` : ''}
       </div>
 
-      <!-- MOBILE STICKY BOTTOM SAVE BAR FOR SMARTPHONES -->
+      <!-- MOBILE STICKY BOTTOM SAVE BAR FOR TEACHERS ONLY -->
       ${isTeacherOrAdmin ? `
         <div class="mobile-sticky-bar sm:hidden">
           <button onclick="window.saveAttendanceRegister()" class="btn btn-primary w-full py-3.5 text-base font-extrabold shadow-2xl">

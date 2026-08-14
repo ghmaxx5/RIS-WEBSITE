@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v3.8 Automatic Midnight Rollover)
+// RIS School — Main Controller & Client Router (v3.9 Strict Student Permission Lock)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -28,15 +28,11 @@ class App {
     });
   }
 
-  // --- AUTOMATIC 12:00 AM MIDNIGHT ROLLOVER DETECTOR ---
   setupMidnightRolloverCheck() {
-    // Check every 30 seconds if calendar date has changed (midnight rollover)
     setInterval(() => {
       const todayStr = new Date().toISOString().split('T')[0];
       if (todayStr !== this.currentDateStr) {
         this.currentDateStr = todayStr;
-        
-        // If teacher is currently on attendance view, auto-switch date input & reset to fresh unmarked sheet
         const dateInput = document.getElementById('att-date-input');
         if (dateInput) {
           dateInput.value = todayStr;
@@ -46,7 +42,6 @@ class App {
       }
     }, 30000);
 
-    // Also check on tab focus when teacher opens phone/browser in the morning
     window.addEventListener('focus', () => {
       const todayStr = new Date().toISOString().split('T')[0];
       if (todayStr !== this.currentDateStr) {
@@ -261,6 +256,12 @@ class App {
     };
 
     window.handleDeleteUser = (userId) => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role !== 'admin') {
+        this.showToast("Permission denied: Only Admin can remove user accounts.", "danger");
+        return;
+      }
+
       if (confirm("Are you sure you want to remove this user from the school portal?")) {
         store.deleteUser(userId);
         if (db.isConnected) db.deleteUser(userId);
@@ -271,6 +272,11 @@ class App {
 
     // --- NOTICE HANDLERS ---
     window.openNoticeModal = () => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission denied: Students cannot post announcements.", "danger");
+        return;
+      }
       document.getElementById('create-notice-modal')?.classList.remove('hidden');
     };
     window.closeNoticeModal = () => {
@@ -298,6 +304,12 @@ class App {
     };
 
     window.handleDeleteNotice = (noticeId) => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission denied: Students cannot delete notices.", "danger");
+        return;
+      }
+
       if (confirm("Are you sure you want to delete this notice?")) {
         const deleted = store.deleteNotice(noticeId);
         if (deleted) {
@@ -323,15 +335,15 @@ class App {
       this.render();
     };
 
-    // --- MORNING ATTENDANCE HANDLERS ---
+    // --- MORNING ATTENDANCE HANDLERS (STRICT STUDENT GUARD) ---
     window.loadAttendanceSheet = () => {
       this.loadAttendanceSheet();
     };
 
     window.markAllPresent = () => {
       const currentUser = store.getCurrentUser();
-      if (!currentUser || (!store.isAdminSessionActive() && currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
-        this.showToast("Permission denied: Only Teachers & Admins can mark attendance.", "danger");
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot mark attendance.", "danger");
         return;
       }
 
@@ -344,8 +356,8 @@ class App {
 
     window.setStudentStatus = (studentId, status) => {
       const currentUser = store.getCurrentUser();
-      if (!currentUser || (!store.isAdminSessionActive() && currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
-        this.showToast("Permission denied: Students cannot edit attendance.", "danger");
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot edit attendance.", "danger");
         return;
       }
 
@@ -360,6 +372,12 @@ class App {
     };
 
     window.saveAttendanceRegister = () => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot save attendance registers.", "danger");
+        return;
+      }
+
       const classSelect = document.getElementById('att-class-select');
       const dateInput = document.getElementById('att-date-input');
 
@@ -393,13 +411,24 @@ class App {
       document.getElementById('audit-log-drawer')?.classList.toggle('hidden');
     };
 
-    // --- STAFF & LEAVE HANDLERS ---
+    // --- STAFF & LEAVE HANDLERS (STRICT STUDENT GUARD) ---
     window.toggleStaffCheckIn = (teacherId) => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot alter staff check-ins.", "danger");
+        return;
+      }
+
       const checkedIn = store.staffCheckIn(teacherId);
       this.showToast(checkedIn ? "Faculty checked in!" : "Faculty checked out!", "info");
     };
 
     window.openLeaveModal = () => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Only Teachers can submit leave applications.", "danger");
+        return;
+      }
       document.getElementById('leave-request-modal')?.classList.remove('hidden');
     };
     window.closeLeaveModal = () => {
@@ -407,6 +436,12 @@ class App {
     };
     window.handleCreateLeave = (e) => {
       e.preventDefault();
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot submit leave applications.", "danger");
+        return;
+      }
+
       const form = e.target;
       const newLeave = store.submitLeaveRequest({
         leaveType: form.leaveType.value,
@@ -425,12 +460,24 @@ class App {
     };
 
     window.approveLeave = (leaveId) => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot approve leave applications.", "danger");
+        return;
+      }
+
       const res = store.reviewLeaveRequest(leaveId, 'approved', 'Approved by Principal.');
       if (res) this.showToast("Leave request approved!", "success");
       else this.showToast("Permission denied: Admin approval required.", "danger");
     };
 
     window.rejectLeave = (leaveId) => {
+      const currentUser = store.getCurrentUser();
+      if (!currentUser || currentUser.role === 'student') {
+        this.showToast("Permission Denied: Students cannot reject leave applications.", "danger");
+        return;
+      }
+
       const res = store.reviewLeaveRequest(leaveId, 'rejected', 'Rejected.');
       if (res) this.showToast("Leave request rejected.", "warning");
       else this.showToast("Permission denied: Admin approval required.", "danger");
@@ -475,7 +522,8 @@ class App {
     if (!container) return;
 
     const currentUser = store.getCurrentUser();
-    const isTeacherOrAdmin = store.isAdminSessionActive() || (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin'));
+    // Strictly block student role from rendering interactive controls!
+    const isTeacherOrAdmin = currentUser && currentUser.role !== 'student' && (store.isAdminSessionActive() || currentUser.role === 'teacher' || currentUser.role === 'admin');
 
     const studentIds = Object.keys(this.attendanceState);
     const presentCount = studentIds.filter(id => this.attendanceState[id].status === 'present').length;
