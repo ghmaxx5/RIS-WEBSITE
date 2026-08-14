@@ -1,4 +1,4 @@
-// RIS School — Clean Data Store with 30 Realistically Formatted Class 8A & 8B Students (v3.5)
+// RIS School — Clean Data Store with Class Teacher Terminology (v3.7)
 
 export const initialMockData = {
   school: {
@@ -10,7 +10,6 @@ export const initialMockData = {
   },
   
   users: [
-    // 1. DEFAULT ADMIN ACCOUNT
     {
       id: "admin-1",
       name: "School Principal (Admin)",
@@ -20,16 +19,16 @@ export const initialMockData = {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"
     },
 
-    // 2. TEACHERS
+    // TEACHERS (Class Teacher 8-A and Class Teacher 8-B)
     {
       id: "teacher-1",
       name: "Mrs. Anjali Sharma",
       role: "teacher",
-      title: "Class 8-A Homeroom Advisor & Math Faculty",
+      title: "Class Teacher 8-A & Math Faculty",
       email: "anjali.sharma@risschool.edu",
       avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150",
-      homeroomClass: "8A",
-      isHomeroomTeacher: true,
+      classTeacherClass: "8A",
+      isClassTeacher: true,
       subjects: ["Mathematics"],
       checkedIn: true,
       checkInTime: "07:55 AM"
@@ -38,17 +37,17 @@ export const initialMockData = {
       id: "teacher-2",
       name: "Mr. Vikramaditya Verma",
       role: "teacher",
-      title: "Class 8-B Homeroom Advisor & Science Faculty",
+      title: "Class Teacher 8-B & Science Faculty",
       email: "vikram.verma@risschool.edu",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
-      homeroomClass: "8B",
-      isHomeroomTeacher: true,
+      classTeacherClass: "8B",
+      isClassTeacher: true,
       subjects: ["Science"],
       checkedIn: true,
       checkInTime: "08:02 AM"
     },
 
-    // 3. CLASS 8-A STUDENTS (15 Students)
+    // CLASS 8-A STUDENTS (15 Students)
     { id: "student-8A-01", name: "Aarav Sharma", role: "student", classId: "8A", rollNo: "8A-01", email: "aarav.s@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8A-02", name: "Ananya Gupta", role: "student", classId: "8A", rollNo: "8A-02", email: "ananya.g@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8A-03", name: "Rohan Patel", role: "student", classId: "8A", rollNo: "8A-03", email: "rohan.p@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150" },
@@ -65,7 +64,7 @@ export const initialMockData = {
     { id: "student-8A-14", name: "Riya Rao", role: "student", classId: "8A", rollNo: "8A-14", email: "riya.r@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8A-15", name: "Siddharth Chopra", role: "student", classId: "8A", rollNo: "8A-15", email: "siddharth.c@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" },
 
-    // 4. CLASS 8-B STUDENTS (15 Students)
+    // CLASS 8-B STUDENTS (15 Students)
     { id: "student-8B-01", name: "Tanvi Kulkarni", role: "student", classId: "8B", rollNo: "8B-01", email: "tanvi.k@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8B-02", name: "Varun Shah", role: "student", classId: "8B", rollNo: "8B-02", email: "varun.s@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8B-03", name: "Sneha Das", role: "student", classId: "8B", rollNo: "8B-03", email: "sneha.d@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150" },
@@ -101,7 +100,7 @@ export const initialMockData = {
     {
       id: "notice-201",
       title: "Welcome to Rose International School Portal",
-      content: "All teachers and students of Class 8-A and Class 8-B are requested to register their profiles. Teachers must enter the official school passcode (RIS2026) to complete teacher registration.",
+      content: "All Class Teachers and students of Class 8-A and Class 8-B are requested to register their profiles. Teachers must enter the official school passcode (RIS2026) to complete teacher registration.",
       priority: "important",
       targetAudience: "Whole School",
       authorId: "admin-1",
@@ -123,7 +122,7 @@ export const initialMockData = {
       actorName: "System",
       actorRole: "Admin",
       action: "SECURITY_INIT",
-      details: "Rose International School Portal initialized with 30 students across Class 8-A and Class 8-B."
+      details: "Rose International School Portal initialized with Class Teacher assignments for Class 8-A and Class 8-B."
     }
   ]
 };

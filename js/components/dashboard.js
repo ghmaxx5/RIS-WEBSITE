@@ -1,8 +1,9 @@
-// RIS School — Dashboard Component (Role-Tailored, Class 8A & 8B Only)
+// RIS School — Dashboard Component (Role-Tailored with Class Teacher Terminology)
 import { store } from '../store.js';
 
 export function renderDashboard() {
   const user = store.getCurrentUser();
+  if (!user) return '';
 
   if (user.role === 'admin') {
     return renderAdminDashboard(user);
@@ -157,7 +158,7 @@ function renderAdminDashboard(user) {
                     </span>
                   </td>
                   <td class="p-3 text-slate-500">${u.email}</td>
-                  <td class="p-3 text-slate-600 dark:text-slate-400 font-bold">${u.classId ? 'Class ' + u.classId : (u.homeroomClass ? 'Homeroom ' + u.homeroomClass : 'All')}</td>
+                  <td class="p-3 text-slate-600 dark:text-slate-400 font-bold">${u.classId ? 'Class ' + u.classId : (u.classTeacherClass ? 'Class Teacher ' + u.classTeacherClass : 'All')}</td>
                   <td class="p-3">
                     ${u.id !== 'admin-1' ? `
                       <button onclick="window.handleDeleteUser('${u.id}')" class="text-red-600 font-bold hover:underline">Remove</button>
@@ -190,7 +191,7 @@ function renderTeacherDashboard(user) {
               <span class="text-xs font-bold uppercase tracking-wider text-blue-200">Teacher Account</span>
               <h1 class="text-2xl sm:text-3xl font-bold font-heading">Welcome, ${user.name}!</h1>
               <p class="text-xs text-blue-100 mt-0.5">
-                ${user.homeroomClass ? `Homeroom Advisor for <strong>Class ${user.homeroomClass}</strong>` : 'Subject Teacher'}
+                ${user.classTeacherClass ? `Class Teacher for <strong>Class ${user.classTeacherClass}</strong>` : 'Subject Teacher'}
               </p>
             </div>
           </div>

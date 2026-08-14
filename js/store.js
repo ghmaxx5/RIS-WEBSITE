@@ -1,7 +1,7 @@
-// RIS School — Central State Store (v3.6 Automatic 30-Student Seeder)
+// RIS School — Central State Store (v3.7 Class Teacher & Unmarked Default Attendance)
 import { initialMockData } from './mockData.js';
 
-const STORAGE_KEY = 'ris_school_app_data_v3.6';
+const STORAGE_KEY = 'ris_school_app_data_v3.7';
 
 class Store {
   constructor() {
@@ -16,7 +16,6 @@ class Store {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // If saved store has fewer than 15 students, re-seed with full 30-student roster!
         const studentCount = parsed.users ? parsed.users.filter(u => u.role === 'student').length : 0;
         if (studentCount >= 20) {
           return parsed;
@@ -26,7 +25,6 @@ class Store {
       console.warn("Initializing fresh store data", e);
     }
     
-    // Seed fresh store with 30 students
     this.saveData(initialMockData);
     return JSON.parse(JSON.stringify(initialMockData));
   }
@@ -151,9 +149,9 @@ class Store {
       role: userData.role,
       email: userData.email,
       avatar: isTeacher ? teacherAvatars[Math.floor(Math.random() * teacherAvatars.length)] : studentAvatars[Math.floor(Math.random() * studentAvatars.length)],
-      title: isTeacher ? `Teacher — Class ${userData.homeroomClass || 'Subject'}` : `Student — Class ${userData.classId}`,
-      homeroomClass: isTeacher ? (userData.homeroomClass || null) : null,
-      isHomeroomTeacher: isTeacher && !!userData.homeroomClass,
+      title: isTeacher ? `Class Teacher ${userData.classTeacherClass || 'Subject'}` : `Student — Class ${userData.classId}`,
+      classTeacherClass: isTeacher ? (userData.classTeacherClass || null) : null,
+      isClassTeacher: isTeacher && !!userData.classTeacherClass,
       subjects: isTeacher ? (userData.subjects || ["General"]) : [],
       classId: !isTeacher ? (userData.classId || "8A") : null,
       rollNo: !isTeacher ? userData.rollNo : null,

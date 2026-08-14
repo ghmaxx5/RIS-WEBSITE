@@ -1,4 +1,4 @@
-// RIS School — Navbar Component (With Restored Dark/Light Theme Toggle)
+// RIS School — Navbar Component (With Class Teacher Terminology)
 import { store } from '../store.js';
 import { db } from '../db.js';
 
@@ -27,7 +27,7 @@ export function renderNavbar() {
             </div>
           </div>
 
-          <!-- Right Actions (DB, Join, Switcher, Theme, Notifications) -->
+          <!-- Right Actions -->
           <div class="flex items-center gap-2">
             
             <!-- Cloud DB Connection Indicator -->
@@ -286,11 +286,11 @@ export function renderNavbar() {
             </div>
 
             <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Homeroom Advisor Class</label>
-              <select name="homeroomClass" class="form-select font-bold">
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Class Teacher Assignment</label>
+              <select name="classTeacherClass" class="form-select font-bold">
                 <option value="">None (Subject Teacher)</option>
-                <option value="8A">Class 8-A</option>
-                <option value="8B">Class 8-B</option>
+                <option value="8A">Class Teacher 8-A</option>
+                <option value="8B">Class Teacher 8-B</option>
               </select>
             </div>
             <div>
@@ -378,7 +378,6 @@ export function setupNavbarEvents() {
     });
   }
 
-  // Dark / Light Theme Toggle Listener
   const themeBtn = document.getElementById('theme-toggle-btn');
   if (themeBtn) {
     themeBtn.addEventListener('click', () => {

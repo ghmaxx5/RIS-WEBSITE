@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v3.3 Principal Session Persistence)
+// RIS School — Main Controller & Client Router (v3.7 Class Teacher & Unmarked Default Attendance)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -207,7 +207,7 @@ class App {
         name,
         email,
         teacherPasscode: form.teacherPasscode?.value,
-        homeroomClass: form.homeroomClass?.value,
+        classTeacherClass: form.classTeacherClass?.value,
         subjects: form.subjects?.value ? [form.subjects.value] : ["General"],
         classId: form.classId?.value,
         rollNo: form.rollNo?.value
@@ -316,7 +316,12 @@ class App {
       }
 
       if (this.attendanceState[studentId]) {
-        this.attendanceState[studentId].status = status;
+        // Toggle status if tapped again
+        if (this.attendanceState[studentId].status === status) {
+          this.attendanceState[studentId].status = null;
+        } else {
+          this.attendanceState[studentId].status = status;
+        }
         this.renderRosterRows();
       }
     };
@@ -330,6 +335,15 @@ class App {
       const classId = classSelect.value;
       const dateStr = dateInput.value;
 
+      const studentIds = Object.keys(this.attendanceState);
+      const unmarkedCount = studentIds.filter(id => !this.attendanceState[id].status).length;
+
+      if (unmarkedCount > 0) {
+        if (!confirm(`Warning: ${unmarkedCount} student(s) are still unmarked (Pending). Do you want to save attendance register anyway?`)) {
+          return;
+        }
+      }
+
       const saved = store.saveStudentAttendance(classId, dateStr, this.attendanceState);
       if (!saved) {
         this.showToast("Permission denied: Only Teachers & Admins can save attendance.", "danger");
@@ -339,7 +353,7 @@ class App {
       if (db.isConnected) {
         db.saveAttendance(classId, dateStr, "Daily Morning Register", store.getCurrentUser().name, this.attendanceState);
       }
-      this.showToast(`Morning attendance for Class ${classId} saved!`, "success");
+      this.showToast(`Morning attendance for Class ${classId} saved successfully!`, "success");
     };
 
     window.toggleAuditLogDrawer = () => {
@@ -416,7 +430,8 @@ class App {
     this.attendanceState = {};
 
     students.forEach(s => {
-      const status = existing && existing.records[s.id] ? existing.records[s.id].status : 'present';
+      // By default, if no attendance saved yet for today, status is NULL (Unmarked)!
+      const status = existing && existing.records[s.id] ? existing.records[s.id].status : null;
       this.attendanceState[s.id] = { status, studentName: s.name, rollNo: s.rollNo, avatar: s.avatar };
     });
 
@@ -433,6 +448,7 @@ class App {
     const studentIds = Object.keys(this.attendanceState);
     const presentCount = studentIds.filter(id => this.attendanceState[id].status === 'present').length;
     const absentCount = studentIds.filter(id => this.attendanceState[id].status === 'absent').length;
+    const unmarkedCount = studentIds.filter(id => !this.attendanceState[id].status).length;
 
     const counterPresent = document.getElementById('count-present');
     const counterAbsent = document.getElementById('count-absent');
@@ -459,7 +475,10 @@ class App {
               <div class="flex items-center gap-3">
                 <img src="${s.avatar}" class="w-11 h-11 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm">
                 <div>
-                  <div class="font-extrabold text-sm text-slate-900 dark:text-white">${s.studentName}</div>
+                  <div class="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    ${s.studentName}
+                    ${!s.status ? `<span class="text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-bold">Unmarked</span>` : ''}
+                  </div>
                   <div class="text-xs text-slate-500 font-semibold">Roll No: ${s.rollNo || 'N/A'}</div>
                 </div>
               </div>
@@ -476,8 +495,8 @@ class App {
                   </button>
                 </div>
               ` : `
-                <span class="badge ${s.status === 'present' ? 'badge-success' : 'badge-danger'} px-4 py-1.5 text-xs font-extrabold uppercase">
-                  ${s.status}
+                <span class="badge ${s.status === 'present' ? 'badge-success' : (s.status === 'absent' ? 'badge-danger' : 'badge-info')} px-4 py-1.5 text-xs font-extrabold uppercase">
+                  ${s.status || 'Pending'}
                 </span>
               `}
             </div>
