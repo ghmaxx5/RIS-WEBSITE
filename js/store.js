@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v4.1 Mark All Notices Read)
+// RIS School — Central State Store (v4.2 Production Security Hardening)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v3.7';
@@ -77,8 +77,8 @@ class Store {
     if (!targetUser) return { success: false, error: "User profile not found." };
 
     if (targetUser.role === 'admin' && !this.adminSessionActive) {
-      if (adminPin !== '1612') {
-        return { success: false, error: "Security Verification Failed: Incorrect Admin PIN! Enter PIN 1612." };
+      if (!adminPin || adminPin.trim() !== '1612') {
+        return { success: false, error: "Authentication Failed: Invalid Admin Security PIN! Access denied." };
       }
       this.adminSessionActive = true;
       localStorage.setItem('ris_admin_session_active', 'true');
@@ -128,7 +128,7 @@ class Store {
       if (!userData.teacherPasscode || userData.teacherPasscode.trim() !== correctPasscode) {
         return { 
           success: false, 
-          error: `Security Check Failed: Invalid Teacher Passcode! You must enter the official school passcode (${correctPasscode}) to register as a Teacher.` 
+          error: "Registration Failed: Invalid Teacher Security Passcode! Verification failed." 
         };
       }
     }

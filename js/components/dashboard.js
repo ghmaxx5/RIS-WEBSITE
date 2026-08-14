@@ -1,4 +1,4 @@
-// RIS School — Dashboard Component (Role-Tailored with Class Teacher Terminology)
+// RIS School — Dashboard Component (Role-Tailored with Production Security)
 import { store } from '../store.js';
 
 export function renderDashboard() {
@@ -54,8 +54,8 @@ function renderAdminDashboard(user) {
             <i class="ph-bold ph-shield-check"></i>
           </div>
           <div>
-            <div class="text-xs font-bold uppercase tracking-wider text-blue-300">Teacher Security Passcode</div>
-            <div class="font-extrabold text-sm">Share code <span class="bg-blue-600 px-2 py-0.5 rounded font-mono text-white">RIS2026</span> with verified faculty members to register as a Teacher.</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-blue-300">Faculty Registration Security</div>
+            <div class="font-semibold text-sm">Share the official school Teacher Passcode with verified faculty members to allow them to register as a Class Teacher.</div>
           </div>
         </div>
       </div>
