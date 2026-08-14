@@ -1,4 +1,4 @@
-// RIS School — Navbar & Navigation Header Component (With Admin Profile Switcher)
+// RIS School — Navbar Component (Seamless Principal Account Impersonation)
 import { store } from '../store.js';
 import { db } from '../db.js';
 
@@ -9,7 +9,7 @@ export function renderNavbar() {
   
   const unreadNotices = user ? notices.filter(n => !n.readBy.includes(user.id)) : [];
   const unreadCount = unreadNotices.length;
-  const isAdmin = user && user.role === 'admin';
+  const isAdminActive = store.isAdminSessionActive();
 
   return `
     <header class="top-header">
@@ -27,7 +27,7 @@ export function renderNavbar() {
             </div>
           </div>
 
-          <!-- User Account & Cloud DB Bar -->
+          <!-- User Account & Principal Supervision Bar -->
           <div class="flex items-center gap-2 sm:gap-3">
             
             <!-- Cloud DB Connection Indicator -->
@@ -43,11 +43,11 @@ export function renderNavbar() {
             </button>
 
             ${user ? `
-              <!-- ADMIN PROFILE SWITCHER DROPDOWN (Principal Supervisor View) -->
-              ${isAdmin ? `
-                <div class="hidden sm:flex items-center bg-blue-950/90 px-3 py-1.5 rounded-full border border-blue-700/60 shadow-lg">
-                  <span class="text-xs text-blue-300 font-bold mr-1.5 flex items-center gap-1">
-                    <i class="ph-bold ph-shield-check text-emerald-400"></i> Admin Switch:
+              <!-- PRINCIPAL ACCOUNT SWITCHER (ONLY SHOWN IF PRINCIPAL IS LOGGED IN) -->
+              ${isAdminActive ? `
+                <div class="flex items-center gap-2 bg-blue-950/90 px-3 py-1 rounded-full border border-blue-700/60 shadow-lg">
+                  <span class="text-xs text-blue-300 font-bold hidden md:flex items-center gap-1">
+                    <i class="ph-bold ph-shield-check text-emerald-400"></i> Principal Switch:
                   </span>
                   <select id="role-switcher-select" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer">
                     ${allUsers.map(u => `
@@ -56,9 +56,15 @@ export function renderNavbar() {
                       </option>
                     `).join('')}
                   </select>
+
+                  ${user.id !== 'admin-1' ? `
+                    <button onclick="window.handleReturnToAdmin()" class="btn bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full font-bold ml-1">
+                      👑 Back to Admin
+                    </button>
+                  ` : ''}
                 </div>
               ` : `
-                <!-- Logged-In User Profile Chip -->
+                <!-- REGULAR TEACHER / STUDENT PROFILE CHIP (NO SWITCHER FOR NORMAL USERS) -->
                 <div class="flex items-center gap-2 bg-slate-800/90 px-3 py-1 rounded-full border border-slate-700 text-xs text-white">
                   <img src="${user.avatar}" class="w-6 h-6 rounded-full object-cover">
                   <span class="font-bold hidden sm:inline">${user.name}</span>
@@ -280,7 +286,11 @@ export function setupNavbarEvents() {
   if (roleSelect) {
     roleSelect.addEventListener('change', (e) => {
       const selectedUserId = e.target.value;
-      store.setCurrentUser(selectedUserId);
+      const res = store.switchAsPrincipal(selectedUserId);
+      if (!res.success) {
+        alert(res.error);
+        return;
+      }
       window.location.reload();
     });
   }

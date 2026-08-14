@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v3.2 Security Gate)
+// RIS School — Main Controller & Client Router (v3.3 Principal Session Persistence)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -30,7 +30,6 @@ class App {
     window.router = {
       navigate: (page) => {
         const user = store.getCurrentUser();
-        // Protect all pages behind Login if logged out
         if (!user && page !== 'login') {
           this.currentPage = 'login';
           window.location.hash = 'login';
@@ -105,6 +104,13 @@ class App {
   }
 
   setupGlobalHandlers() {
+
+    // --- PRINCIPAL SUPERVISION SWITCHER ---
+    window.handleReturnToAdmin = () => {
+      store.returnToAdmin();
+      window.router.navigate('dashboard');
+      this.showToast("Returned to Principal Control Center!", "success");
+    };
 
     // --- LOGIN & AUTHENTICATION HANDLERS ---
     window.handleStudentLogin = () => {
@@ -290,7 +296,7 @@ class App {
 
     window.markAllPresent = () => {
       const currentUser = store.getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
+      if (!currentUser || (!store.isAdminSessionActive() && currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
         this.showToast("Permission denied: Only Teachers & Admins can mark attendance.", "danger");
         return;
       }
@@ -304,7 +310,7 @@ class App {
 
     window.setStudentStatus = (studentId, status) => {
       const currentUser = store.getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
+      if (!currentUser || (!store.isAdminSessionActive() && currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
         this.showToast("Permission denied: Students cannot edit attendance.", "danger");
         return;
       }
@@ -422,7 +428,7 @@ class App {
     if (!container) return;
 
     const currentUser = store.getCurrentUser();
-    const isTeacherOrAdmin = currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin');
+    const isTeacherOrAdmin = store.isAdminSessionActive() || (currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin'));
 
     const studentIds = Object.keys(this.attendanceState);
     const presentCount = studentIds.filter(id => this.attendanceState[id].status === 'present').length;

@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v3.2 Security Gate)
+// RIS School — Central State Store (v3.3 Principal Session Persistence)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v3.0';
@@ -7,6 +7,7 @@ class Store {
   constructor() {
     this.data = this.loadData();
     this.currentUserId = localStorage.getItem('ris_current_user_id') || null;
+    this.adminSessionActive = localStorage.getItem('ris_admin_session_active') === 'true';
     this.listeners = [];
   }
 
@@ -47,25 +48,34 @@ class Store {
   resetStore() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem('ris_current_user_id');
+    localStorage.removeItem('ris_admin_session_active');
     this.data = JSON.parse(JSON.stringify(initialMockData));
     this.currentUserId = null;
+    this.adminSessionActive = false;
     this.saveData();
   }
 
-  // --- USER AUTH & SECURITY GATE ---
+  // --- USER AUTH & PRINCIPAL SUPERVISION ---
   getCurrentUser() {
-    if (!this.currentUserId) return null; // Logged out state
+    if (!this.currentUserId) return null;
     return this.data.users.find(u => u.id === this.currentUserId) || null;
+  }
+
+  isAdminSessionActive() {
+    return this.adminSessionActive || (this.getCurrentUser()?.role === 'admin');
   }
 
   setCurrentUser(userId, adminPin = null) {
     const targetUser = this.data.users.find(u => u.id === userId);
     if (!targetUser) return { success: false, error: "User profile not found." };
 
-    if (targetUser.role === 'admin') {
+    // Authentic Admin Login requires PIN 8888
+    if (targetUser.role === 'admin' && !this.adminSessionActive) {
       if (adminPin !== '8888') {
         return { success: false, error: "Security Verification Failed: Incorrect Admin PIN! Enter PIN 8888." };
       }
+      this.adminSessionActive = true;
+      localStorage.setItem('ris_admin_session_active', 'true');
     }
 
     this.currentUserId = userId;
@@ -74,9 +84,33 @@ class Store {
     return { success: true, user: targetUser };
   }
 
+  switchAsPrincipal(userId) {
+    if (!this.isAdminSessionActive()) {
+      return { success: false, error: "Permission Denied: Only Principal Admin can switch accounts." };
+    }
+
+    const targetUser = this.data.users.find(u => u.id === userId);
+    if (!targetUser) return { success: false, error: "User profile not found." };
+
+    this.currentUserId = userId;
+    localStorage.setItem('ris_current_user_id', userId);
+    this.notifyListeners();
+    return { success: true, user: targetUser };
+  }
+
+  returnToAdmin() {
+    this.currentUserId = 'admin-1';
+    this.adminSessionActive = true;
+    localStorage.setItem('ris_current_user_id', 'admin-1');
+    localStorage.setItem('ris_admin_session_active', 'true');
+    this.notifyListeners();
+  }
+
   logout() {
     this.currentUserId = null;
+    this.adminSessionActive = false;
     localStorage.removeItem('ris_current_user_id');
+    localStorage.removeItem('ris_admin_session_active');
     this.notifyListeners();
   }
 
@@ -201,7 +235,7 @@ class Store {
     if (!user) return false;
     const notice = this.data.notices.find(n => n.id === noticeId);
     if (!notice) return false;
-    if (user.role === 'admin') return true;
+    if (user.role === 'admin' || this.isAdminSessionActive()) return true;
     if (user.role === 'teacher' && notice.authorId === user.id) return true;
     return false;
   }
@@ -365,7 +399,7 @@ class Store {
 
   reviewLeaveRequest(leaveId, status, reviewerNote = "") {
     const user = this.getCurrentUser();
-    if (!user || user.role !== 'admin') return false;
+    if (!user || (!this.isAdminSessionActive() && user.role !== 'admin')) return false;
 
     const leave = this.data.leaveRequests.find(l => l.id === leaveId);
     if (leave) {
