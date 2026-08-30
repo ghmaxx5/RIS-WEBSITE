@@ -1,4 +1,4 @@
-// RIS School — Dashboard Component (Role-Tailored with Production Security)
+// RIS School — Dashboard Component (Role-Tailored with Direct Leave Review & Production Security)
 import { store } from '../store.js';
 
 export function renderDashboard() {
@@ -34,29 +34,16 @@ function renderAdminDashboard(user) {
             RIS Administration Control Center
           </h1>
           <p class="text-slate-500 dark:text-slate-400 text-sm">
-            Managing <span class="font-bold text-blue-600 dark:text-blue-400">Class 8-A & Class 8-B</span>. Logged in as Administrator.
+            Managing <span class="font-bold text-blue-600 dark:text-blue-400">Class 8-A & Class 8-B</span>. Logged in as Principal / Administrator.
           </p>
         </div>
         <div class="flex items-center gap-3">
           <button onclick="window.openRegistrationModal()" class="btn btn-primary">
             <i class="ph-bold ph-user-plus text-lg"></i> Register New User
           </button>
-          <button onclick="window.router.navigate('notices')" class="btn btn-outline">
+          <button onclick="window.openNoticeModal()" class="btn btn-outline">
             <i class="ph-bold ph-megaphone text-lg"></i> Post Notice
           </button>
-        </div>
-      </div>
-
-      <!-- Teacher Security Passcode Info Banner -->
-      <div class="p-4 rounded-2xl bg-gradient-to-r from-blue-900 to-slate-900 text-white flex items-center justify-between shadow-lg">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center font-bold text-xl">
-            <i class="ph-bold ph-shield-check"></i>
-          </div>
-          <div>
-            <div class="text-xs font-bold uppercase tracking-wider text-blue-300">Faculty Registration Security</div>
-            <div class="font-semibold text-sm">Share the official school Teacher Passcode with verified faculty members to allow them to register as a Class Teacher.</div>
-          </div>
         </div>
       </div>
 
@@ -109,7 +96,7 @@ function renderAdminDashboard(user) {
           <p class="text-xs text-slate-500 mt-1">Passcode Verified</p>
         </div>
 
-        <div class="glass-card p-5">
+        <div class="glass-card p-5 cursor-pointer hover:border-amber-500/50 transition" onclick="window.router.navigate('staff-attendance')">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Leave Applications</span>
             <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
@@ -120,10 +107,57 @@ function renderAdminDashboard(user) {
             <span class="text-3xl font-black text-slate-900 dark:text-white font-heading">${pendingLeaves.length}</span>
             <span class="text-xs font-semibold text-amber-600">Pending Review</span>
           </div>
-          <p class="text-xs text-slate-500 mt-1">Requires Principal approval</p>
+          <p class="text-xs text-blue-600 dark:text-blue-400 mt-1 font-bold flex items-center gap-1">Click to review in Staff tab →</p>
         </div>
 
       </div>
+
+      <!-- PENDING LEAVE APPLICATIONS QUICK REVIEW (If any exist) -->
+      ${pendingLeaves.length > 0 ? `
+        <div class="glass-card p-6 border-2 border-amber-500/40 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center font-bold text-sm">⏳</span>
+              <div>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">Pending Faculty Leave Applications</h3>
+                <p class="text-xs text-slate-500">Requires Principal approval or rejection</p>
+              </div>
+            </div>
+            <span class="badge badge-warning">${pendingLeaves.length} Pending</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${pendingLeaves.map(l => `
+              <div class="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <div class="font-extrabold text-sm text-slate-900 dark:text-white">${l.teacherName}</div>
+                    <div class="text-xs text-slate-500 font-semibold">${l.leaveType} (${l.role})</div>
+                  </div>
+                  <span class="badge badge-warning">Pending Review</span>
+                </div>
+
+                <div class="text-xs text-slate-600 dark:text-slate-300">
+                  <i class="ph-bold ph-calendar text-blue-500"></i> <strong>Duration:</strong> ${l.startDate} to ${l.endDate}
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400 italic bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                  "${l.reason}"
+                </p>
+
+                <div class="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <button onclick="window.approveLeave('${l.id}')" class="btn btn-success text-xs py-1.5 flex-1 font-bold shadow-md">
+                    <i class="ph-bold ph-check"></i> Approve Leave
+                  </button>
+                  <button onclick="window.rejectLeave('${l.id}')" class="btn btn-outline text-xs py-1.5 text-red-600 border-red-200 flex-1 font-bold hover:bg-red-50">
+                    <i class="ph-bold ph-x"></i> Reject
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
 
       <!-- User Directory Table -->
       <div class="glass-card p-6">
