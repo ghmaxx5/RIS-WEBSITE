@@ -507,8 +507,8 @@ class App {
 
     window.approveLeave = (leaveId) => {
       const currentUser = store.getCurrentUser();
-      if (!currentUser || currentUser.role === 'student') {
-        this.showToast("Permission Denied: Students cannot approve leave applications.", "danger");
+      if (!currentUser || currentUser.role !== 'admin') {
+        this.showToast("Permission Denied: Only School Principal / Administrator can approve leave applications.", "danger");
         return;
       }
 
@@ -519,12 +519,12 @@ class App {
 
     window.rejectLeave = (leaveId) => {
       const currentUser = store.getCurrentUser();
-      if (!currentUser || currentUser.role === 'student') {
-        this.showToast("Permission Denied: Students cannot reject leave applications.", "danger");
+      if (!currentUser || currentUser.role !== 'admin') {
+        this.showToast("Permission Denied: Only School Principal / Administrator can reject leave applications.", "danger");
         return;
       }
 
-      const res = store.reviewLeaveRequest(leaveId, 'rejected', 'Rejected.');
+      const res = store.reviewLeaveRequest(leaveId, 'rejected', 'Rejected by Principal.');
       if (res) this.showToast("Leave request rejected.", "warning");
       else this.showToast("Permission denied: Admin approval required.", "danger");
     };

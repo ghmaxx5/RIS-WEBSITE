@@ -1,13 +1,14 @@
-// RIS School — Staff Attendance & Leave Management Component (Student Read-Only Lock)
+// RIS School — Staff Attendance & Leave Management Component (Strict Admin-Only Review Lock)
 import { store } from '../store.js';
 
 export function renderStaffAttendance() {
   const user = store.getCurrentUser();
-  const isStudent = user && user.role === 'student';
+  const isAdmin = user && user.role === 'admin';
   const isTeacher = user && user.role === 'teacher';
-  const isAdmin = user && (user.role === 'admin' || (store.isAdminSessionActive() && !isStudent));
+  const isStudent = user && user.role === 'student';
 
   const staffRoster = store.getStaffRoster();
+  // Admin sees all leave requests; Teachers only see their own leave requests; Students see none
   const leaveRequests = store.getLeaveRequests(isAdmin ? null : (isTeacher ? user.id : 'none'));
 
   return `
@@ -78,11 +79,11 @@ export function renderStaffAttendance() {
           </div>
         </div>
 
-        <!-- Leave Requests List Card (Hidden for Students) -->
+        <!-- Leave Requests List Card (Strictly Admin / Principal Can Approve) -->
         ${!isStudent ? `
           <div class="glass-card p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">Leave Applications</h3>
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">${isAdmin ? 'All Leave Applications' : 'My Leave Applications'}</h3>
               <span class="badge badge-warning">${leaveRequests.filter(l => l.status === 'pending').length} Pending</span>
             </div>
 
@@ -112,14 +113,19 @@ export function renderStaffAttendance() {
 
                     ${l.reviewerNote ? `
                       <div class="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
-                        <strong>Admin Note:</strong> ${l.reviewerNote}
+                        <strong>Principal Note:</strong> ${l.reviewerNote}
                       </div>
                     ` : ''}
 
+                    <!-- STRICT SECURITY: Only Principal (Admin) can see and click Approve / Reject buttons! -->
                     ${isAdmin && l.status === 'pending' ? `
                       <div class="flex gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <button onclick="window.approveLeave('${l.id}')" class="btn btn-success text-xs py-1 flex-1">Approve</button>
-                        <button onclick="window.rejectLeave('${l.id}')" class="btn btn-outline text-xs py-1 text-red-600 border-red-200 flex-1">Reject</button>
+                        <button onclick="window.approveLeave('${l.id}')" class="btn btn-success text-xs py-1 flex-1 font-bold">
+                          <i class="ph-bold ph-check"></i> Approve
+                        </button>
+                        <button onclick="window.rejectLeave('${l.id}')" class="btn btn-outline text-xs py-1 text-red-600 border-red-200 flex-1 font-bold hover:bg-red-50">
+                          <i class="ph-bold ph-x"></i> Reject
+                        </button>
                       </div>
                     ` : ''}
                   </div>
