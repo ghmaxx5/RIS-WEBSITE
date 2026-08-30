@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v4.8 Smooth Zero-Flicker Background Sync)
+// RIS School — Main Controller & Client Router (v5.1 Production Hardened)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -27,7 +27,7 @@ class App {
       await store.syncWithCloud(db);
     }
 
-    // Silent background cloud check (only re-renders if actual new cloud data exists)
+    // Silent background cloud check
     setInterval(async () => {
       if (db.isConnected) {
         await store.syncWithCloud(db);
@@ -37,7 +37,6 @@ class App {
     this.render();
 
     store.subscribe(() => {
-      // Don't interrupt user if currently typing in an input or textarea
       const activeEl = document.activeElement;
       const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
       if (!isTyping) {
@@ -293,6 +292,7 @@ class App {
       }
     };
 
+    // --- NOTICE HANDLERS ---
     window.openNoticeModal = () => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
@@ -333,6 +333,7 @@ class App {
 
       window.closeNoticeModal();
       this.showToast("Announcement published & synced to cloud!", "success");
+      this.render();
     };
 
     window.handleDeleteNotice = async (noticeId) => {
@@ -346,7 +347,8 @@ class App {
         const deleted = store.deleteNotice(noticeId);
         if (deleted) {
           if (db.isConnected) await db.deleteNotice(noticeId);
-          this.showToast("Notice deleted.", "warning");
+          this.showToast("Notice deleted permanently.", "warning");
+          this.render();
         } else {
           this.showToast("Permission denied: You can only delete notices you posted.", "danger");
         }
@@ -354,11 +356,57 @@ class App {
     };
 
     window.filterNotices = (priority) => {
-      const container = document.getElementById('notices-feed-container');
       const user = store.getCurrentUser();
       const list = store.getNotices({ priority: priority === 'all' ? null : priority });
+      const container = document.getElementById('notices-feed-container');
       if (container) {
-        container.innerHTML = list.map(n => this.renderNoticeCardHtml(n, user)).join('');
+        if (list.length === 0) {
+          container.innerHTML = `<div class="glass-card p-8 text-center text-slate-400">No announcements match this filter.</div>`;
+        } else {
+          container.innerHTML = list.map(n => {
+            const isUrgent = n.priority === 'urgent';
+            const canDelete = user && user.role !== 'student' && store.canDeleteNotice(n.id);
+            return `
+              <div class="glass-card p-6 space-y-3 ${isUrgent ? 'border-2 border-red-500/50 bg-red-950/10' : ''}">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                  <div class="flex items-center gap-3">
+                    ${isUrgent ? `
+                      <span class="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold animate-pulse text-sm">🚨</span>
+                    ` : `
+                      <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-sm">
+                        <i class="ph-bold ph-bell"></i>
+                      </div>
+                    `}
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="badge ${n.priority === 'urgent' ? 'badge-danger' : (n.priority === 'important' ? 'badge-warning' : 'badge-info')} uppercase">
+                          ${n.priority}
+                        </span>
+                        <span class="text-xs font-semibold text-slate-500">Audience: ${n.targetAudience}</span>
+                      </div>
+                      <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading mt-0.5">${n.title}</h3>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    ${canDelete ? `
+                      <button onclick="window.handleDeleteNotice('${n.id}')" class="btn btn-outline text-xs py-1 text-red-600 border-red-200 hover:bg-red-50">
+                        <i class="ph-bold ph-trash"></i> Delete Notice
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+
+                <p class="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">${n.content}</p>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+                  <span>Posted by <strong>${n.authorName}</strong> (${n.authorRole})</span>
+                  <span>${new Date(n.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
       }
     };
 
@@ -507,6 +555,7 @@ class App {
 
       window.closeLeaveModal();
       this.showToast("Leave application submitted & synced to cloud!", "success");
+      this.render();
     };
 
     window.approveLeave = async (leaveId) => {
@@ -520,6 +569,7 @@ class App {
       if (updatedLeave) {
         if (db.isConnected) await db.saveLeaveRequest(updatedLeave);
         this.showToast("Leave request approved!", "success");
+        this.render();
       } else {
         this.showToast("Permission denied: Admin approval required.", "danger");
       }
@@ -536,6 +586,7 @@ class App {
       if (updatedLeave) {
         if (db.isConnected) await db.saveLeaveRequest(updatedLeave);
         this.showToast("Leave request rejected.", "warning");
+        this.render();
       } else {
         this.showToast("Permission denied: Admin approval required.", "danger");
       }
@@ -655,19 +706,6 @@ class App {
       toast.classList.add('translate-y-full');
       setTimeout(() => toast.remove(), 300);
     }, 3000);
-  }
-
-  renderNoticeCardHtml(n, user) {
-    const canDelete = user && user.role !== 'student' && store.canDeleteNotice(n.id);
-    return `
-      <div class="glass-card p-6 space-y-3">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white font-heading">${n.title}</h3>
-          ${canDelete ? `<button onclick="window.handleDeleteNotice('${n.id}')" class="btn btn-outline text-xs text-red-600">Delete</button>` : ''}
-        </div>
-        <p class="text-sm text-slate-700 dark:text-slate-200">${n.content}</p>
-      </div>
-    `;
   }
 }
 

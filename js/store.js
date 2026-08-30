@@ -1,4 +1,4 @@
-// RIS School — Central State Store with Bidirectional Cloud Auto-Sync (v5.0)
+// RIS School — Central State Store (v5.1 Definitive Supabase Cloud Sync)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v4.6';
@@ -60,86 +60,58 @@ class Store {
     this.saveData();
   }
 
-  // --- TWO-WAY BIDIRECTIONAL CLOUD SYNC ---
+  // --- DEFINITIVE CLOUD SYNC (SUPABASE SINGLE SOURCE OF TRUTH) ---
   async syncWithCloud(db) {
     if (!db || !db.isConnected) return;
     try {
       let hasChanges = false;
 
-      // 1. NOTICES: Download from cloud & upload local
+      // 1. NOTICES: Sync authoritative list from Supabase
       const cloudNotices = await db.fetchNotices();
       if (cloudNotices && Array.isArray(cloudNotices)) {
-        cloudNotices.forEach(cn => {
-          const mapped = {
-            id: cn.id,
-            title: cn.title,
-            content: cn.content,
-            priority: cn.priority || 'normal',
-            targetAudience: cn.target_audience || 'Whole School',
-            authorId: cn.author_id,
-            authorName: cn.author_name,
-            authorRole: cn.author_role,
-            createdAt: cn.created_at,
-            readBy: cn.read_by || []
-          };
-          const idx = this.data.notices.findIndex(n => n.id === mapped.id);
-          if (idx >= 0) {
-            if (JSON.stringify(this.data.notices[idx]) !== JSON.stringify(mapped)) {
-              this.data.notices[idx] = mapped;
-              hasChanges = true;
-            }
-          } else {
-            this.data.notices.unshift(mapped);
-            hasChanges = true;
-          }
-        });
+        const mappedList = cloudNotices.map(cn => ({
+          id: cn.id,
+          title: cn.title,
+          content: cn.content,
+          priority: cn.priority || 'normal',
+          targetAudience: cn.target_audience || 'Whole School',
+          authorId: cn.author_id,
+          authorName: cn.author_name,
+          authorRole: cn.author_role,
+          createdAt: cn.created_at,
+          readBy: cn.read_by || []
+        }));
 
-        // Push any local notice not yet in Supabase
-        for (const ln of this.data.notices) {
-          if (!cloudNotices.some(cn => cn.id === ln.id)) {
-            await db.saveNotice(ln);
-          }
+        if (JSON.stringify(this.data.notices) !== JSON.stringify(mappedList)) {
+          this.data.notices = mappedList;
+          hasChanges = true;
         }
       }
 
-      // 2. LEAVE REQUESTS: Download from cloud & upload local
+      // 2. LEAVE REQUESTS: Sync authoritative list from Supabase
       const cloudLeaves = await db.fetchLeaveRequests();
       if (cloudLeaves && Array.isArray(cloudLeaves)) {
-        cloudLeaves.forEach(cl => {
-          const mapped = {
-            id: cl.id,
-            teacherId: cl.teacher_id,
-            teacherName: cl.teacher_name,
-            role: cl.role,
-            leaveType: cl.leave_type,
-            startDate: cl.start_date,
-            endDate: cl.end_date,
-            reason: cl.reason,
-            status: cl.status,
-            submittedAt: cl.submitted_at,
-            reviewerNote: cl.reviewer_note
-          };
-          const idx = this.data.leaveRequests.findIndex(l => l.id === mapped.id);
-          if (idx >= 0) {
-            if (JSON.stringify(this.data.leaveRequests[idx]) !== JSON.stringify(mapped)) {
-              this.data.leaveRequests[idx] = mapped;
-              hasChanges = true;
-            }
-          } else {
-            this.data.leaveRequests.unshift(mapped);
-            hasChanges = true;
-          }
-        });
+        const mappedLeaves = cloudLeaves.map(cl => ({
+          id: cl.id,
+          teacherId: cl.teacher_id,
+          teacherName: cl.teacher_name,
+          role: cl.role,
+          leaveType: cl.leave_type,
+          startDate: cl.start_date,
+          endDate: cl.end_date,
+          reason: cl.reason,
+          status: cl.status,
+          submittedAt: cl.submitted_at,
+          reviewerNote: cl.reviewer_note
+        }));
 
-        // Push any local leave request not yet in Supabase
-        for (const ll of this.data.leaveRequests) {
-          if (!cloudLeaves.some(cl => cl.id === ll.id)) {
-            await db.saveLeaveRequest(ll);
-          }
+        if (JSON.stringify(this.data.leaveRequests) !== JSON.stringify(mappedLeaves)) {
+          this.data.leaveRequests = mappedLeaves;
+          hasChanges = true;
         }
       }
 
-      // 3. ATTENDANCE: Download from cloud & upload local
+      // 3. ATTENDANCE: Sync from Supabase Cloud
       const cloudAttendance = await db.fetchAttendance();
       if (cloudAttendance && Array.isArray(cloudAttendance)) {
         cloudAttendance.forEach(ca => {
@@ -161,9 +133,9 @@ class Store {
         });
       }
 
-      // 4. USERS: Download from cloud
+      // 4. USERS: Sync from Supabase Cloud
       const cloudUsers = await db.fetchUsers();
-      if (cloudUsers && Array.isArray(cloudUsers)) {
+      if (cloudUsers && Array.isArray(cloudUsers) && cloudUsers.length > 0) {
         cloudUsers.forEach(cu => {
           const idx = this.data.users.findIndex(u => u.id === cu.id);
           const mapped = {
@@ -382,7 +354,7 @@ class Store {
     if (!user || user.role === 'student') return false;
     const notice = this.data.notices.find(n => n.id === noticeId);
     if (!notice) return false;
-    if (user.role === 'admin') return true;
+    if (user.role === 'admin' || this.isAdminSessionActive()) return true;
     if (user.role === 'teacher' && notice.authorId === user.id) return true;
     return false;
   }
