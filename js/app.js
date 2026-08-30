@@ -1,6 +1,7 @@
 // RIS School — Main Controller & Client Router (v5.1 Production Hardened)
 import { store } from './store.js';
 import { db } from './db.js';
+import { nativeBridge } from './nativeBridge.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
 import { renderDashboard } from './components/dashboard.js';
 import { renderNotices } from './components/notices.js';
@@ -14,6 +15,9 @@ class App {
     this.currentPage = 'login';
     this.attendanceState = {};
     this.currentDateStr = new Date().toISOString().split('T')[0];
+    window.store = store;
+    window.db = db;
+    window.nativeBridge = nativeBridge;
     this.init();
   }
 
@@ -22,6 +26,9 @@ class App {
     this.setupGlobalHandlers();
     this.setupMidnightRolloverCheck();
     
+    // Initialize Native Mobile Bridge (hardware back button, status bar, notifications)
+    await nativeBridge.init(this);
+
     // Initial cloud sync (notices once, and attendance/leaves/users)
     if (db.isConnected) {
       await store.syncNoticesOnce(db);
@@ -57,6 +64,10 @@ class App {
           this.loadAttendanceSheet();
           this.showToast(`🌙 Midnight Rollover: Attendance register reset for new day (${todayStr})`, "info");
         }
+        nativeBridge.sendNativeNotification({
+          title: "RIS School — Daily Register Rollover",
+          body: `Morning attendance registers have been reset for today (${todayStr}).`
+        });
       }
     }, 30000);
 
@@ -336,6 +347,14 @@ class App {
         await db.saveNotice(newNotice);
       }
 
+      nativeBridge.triggerHaptic('medium');
+      if (newNotice.priority === 'urgent' || newNotice.priority === 'important') {
+        nativeBridge.sendNativeNotification({
+          title: `🚨 RIS Notice: ${newNotice.title}`,
+          body: newNotice.content
+        });
+      }
+
       window.closeNoticeModal();
       this.showToast("Announcement published & synced to cloud!", "success");
       this.render();
@@ -444,6 +463,7 @@ class App {
         return;
       }
 
+      nativeBridge.triggerHaptic('medium');
       Object.keys(this.attendanceState).forEach(studentId => {
         this.attendanceState[studentId].status = 'present';
       });
@@ -469,6 +489,7 @@ class App {
         return;
       }
 
+      nativeBridge.triggerHaptic('light');
       if (this.attendanceState[studentId]) {
         if (this.attendanceState[studentId].status === status) {
           this.attendanceState[studentId].status = null;

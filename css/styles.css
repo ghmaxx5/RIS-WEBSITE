@@ -306,3 +306,21 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--color-brand);
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
 }
+
+/* Native Mobile Safe Area Insets (Notches & Gesture Bars) */
+@supports (padding-top: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  
+  .top-header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .mobile-sticky-bar {
+    padding-bottom: max(0.85rem, calc(0.85rem + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
