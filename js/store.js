@@ -1,4 +1,4 @@
-// RIS School — Central State Store with Intelligent Diff Cloud Sync (v4.8 Zero Flicker)
+// RIS School — Central State Store with Complete Cloud Sync & Leave Requests (v4.9)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v4.6';
@@ -60,13 +60,13 @@ class Store {
     this.saveData();
   }
 
-  // --- INTELLIGENT DIFF CLOUD SYNC (ZERO FLICKER) ---
+  // --- INTELLIGENT DIFF CLOUD SYNC ---
   async syncWithCloud(db) {
     if (!db || !db.isConnected) return;
     try {
       let hasChanges = false;
 
-      // 1. Fetch & Merge Cloud Notices (Only if different)
+      // 1. Fetch & Merge Cloud Notices
       const cloudNotices = await db.fetchNotices();
       if (cloudNotices && Array.isArray(cloudNotices)) {
         cloudNotices.forEach(cn => {
@@ -95,7 +95,37 @@ class Store {
         });
       }
 
-      // 2. Fetch & Merge Cloud Attendance (Only if different)
+      // 2. Fetch & Merge Cloud Leave Requests
+      const cloudLeaves = await db.fetchLeaveRequests();
+      if (cloudLeaves && Array.isArray(cloudLeaves)) {
+        cloudLeaves.forEach(cl => {
+          const mapped = {
+            id: cl.id,
+            teacherId: cl.teacher_id,
+            teacherName: cl.teacher_name,
+            role: cl.role,
+            leaveType: cl.leave_type,
+            startDate: cl.start_date,
+            endDate: cl.end_date,
+            reason: cl.reason,
+            status: cl.status,
+            submittedAt: cl.submitted_at,
+            reviewerNote: cl.reviewer_note
+          };
+          const idx = this.data.leaveRequests.findIndex(l => l.id === mapped.id);
+          if (idx >= 0) {
+            if (JSON.stringify(this.data.leaveRequests[idx]) !== JSON.stringify(mapped)) {
+              this.data.leaveRequests[idx] = mapped;
+              hasChanges = true;
+            }
+          } else {
+            this.data.leaveRequests.unshift(mapped);
+            hasChanges = true;
+          }
+        });
+      }
+
+      // 3. Fetch & Merge Cloud Attendance
       const cloudAttendance = await db.fetchAttendance();
       if (cloudAttendance && Array.isArray(cloudAttendance)) {
         cloudAttendance.forEach(ca => {
@@ -117,7 +147,7 @@ class Store {
         });
       }
 
-      // 3. Fetch & Merge Cloud Users (Only if different)
+      // 4. Fetch & Merge Cloud Users
       const cloudUsers = await db.fetchUsers();
       if (cloudUsers && Array.isArray(cloudUsers)) {
         cloudUsers.forEach(cu => {
@@ -149,7 +179,6 @@ class Store {
         });
       }
 
-      // Only trigger UI update if actual new data arrived!
       if (hasChanges) {
         this.saveData();
       }
@@ -484,8 +513,10 @@ class Store {
 
   getLeaveRequests(teacherId = null) {
     let list = [...this.data.leaveRequests];
-    if (teacherId) {
+    if (teacherId && teacherId !== 'none') {
       list = list.filter(l => l.teacherId === teacherId);
+    } else if (teacherId === 'none') {
+      return [];
     }
     return list.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
   }
@@ -514,16 +545,16 @@ class Store {
 
   reviewLeaveRequest(leaveId, status, reviewerNote = "") {
     const user = this.getCurrentUser();
-    if (!user || user.role === 'student' || user.role !== 'admin') return false;
+    if (!user || user.role !== 'admin') return null;
 
     const leave = this.data.leaveRequests.find(l => l.id === leaveId);
     if (leave) {
       leave.status = status;
       leave.reviewerNote = reviewerNote;
       this.saveData();
-      return true;
+      return leave;
     }
-    return false;
+    return null;
   }
 
   getAuditLogs() {

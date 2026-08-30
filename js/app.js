@@ -480,7 +480,7 @@ class App {
     window.closeLeaveModal = () => {
       document.getElementById('leave-request-modal')?.classList.add('hidden');
     };
-    window.handleCreateLeave = (e) => {
+    window.handleCreateLeave = async (e) => {
       e.preventDefault();
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
@@ -501,32 +501,44 @@ class App {
         return;
       }
 
+      if (db.isConnected) {
+        await db.saveLeaveRequest(newLeave);
+      }
+
       window.closeLeaveModal();
-      this.showToast("Leave application submitted!", "success");
+      this.showToast("Leave application submitted & synced to cloud!", "success");
     };
 
-    window.approveLeave = (leaveId) => {
+    window.approveLeave = async (leaveId) => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
         this.showToast("Permission Denied: Only School Principal / Administrator can approve leave applications.", "danger");
         return;
       }
 
-      const res = store.reviewLeaveRequest(leaveId, 'approved', 'Approved by Principal.');
-      if (res) this.showToast("Leave request approved!", "success");
-      else this.showToast("Permission denied: Admin approval required.", "danger");
+      const updatedLeave = store.reviewLeaveRequest(leaveId, 'approved', 'Approved by Principal.');
+      if (updatedLeave) {
+        if (db.isConnected) await db.saveLeaveRequest(updatedLeave);
+        this.showToast("Leave request approved!", "success");
+      } else {
+        this.showToast("Permission denied: Admin approval required.", "danger");
+      }
     };
 
-    window.rejectLeave = (leaveId) => {
+    window.rejectLeave = async (leaveId) => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
         this.showToast("Permission Denied: Only School Principal / Administrator can reject leave applications.", "danger");
         return;
       }
 
-      const res = store.reviewLeaveRequest(leaveId, 'rejected', 'Rejected by Principal.');
-      if (res) this.showToast("Leave request rejected.", "warning");
-      else this.showToast("Permission denied: Admin approval required.", "danger");
+      const updatedLeave = store.reviewLeaveRequest(leaveId, 'rejected', 'Rejected by Principal.');
+      if (updatedLeave) {
+        if (db.isConnected) await db.saveLeaveRequest(updatedLeave);
+        this.showToast("Leave request rejected.", "warning");
+      } else {
+        this.showToast("Permission denied: Admin approval required.", "danger");
+      }
     };
 
     window.filterReportsTable = () => {

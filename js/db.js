@@ -1,4 +1,4 @@
-// RIS School — Cloud Database Client (Embedded Supabase Integration)
+// RIS School — Cloud Database Client (Embedded Supabase with Leave Requests Sync)
 
 const DEFAULT_SUPABASE_URL = "https://mqrytfngbnwxolatcnng.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcnl0Zm5nYm53eG9sYXRjbm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwODE5ODIsImV4cCI6MjEwMzY1Nzk4Mn0.iZAgRly0aglUMmW8-o3EXyJVb282ifMa-7xZt_RlpEs";
@@ -62,7 +62,6 @@ class DatabaseService {
       if (error) throw error;
       return data;
     } catch (e) {
-      console.warn("Cloud DB fetchUsers failed, falling back to local store", e);
       return null;
     }
   }
@@ -161,6 +160,39 @@ class DatabaseService {
         period: period,
         marked_by: markedBy,
         records: records
+      });
+      return !error;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- LEAVE REQUESTS CLOUD SYNC ---
+  async fetchLeaveRequests() {
+    if (!this.isConnected) return null;
+    try {
+      const { data, error } = await this.client.from('leave_requests').select('*').order('submitted_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async saveLeaveRequest(leave) {
+    if (!this.isConnected) return false;
+    try {
+      const { error } = await this.client.from('leave_requests').upsert({
+        id: leave.id,
+        teacher_id: leave.teacherId,
+        teacher_name: leave.teacherName,
+        role: leave.role,
+        leave_type: leave.leaveType,
+        start_date: leave.startDate,
+        end_date: leave.endDate,
+        reason: leave.reason,
+        status: leave.status,
+        reviewer_note: leave.reviewerNote
       });
       return !error;
     } catch (e) {
