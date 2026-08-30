@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v5.1 Definitive Supabase Cloud Sync)
+// RIS School — Central State Store (v5.2 Robust Authoritative Sync & Clean Deletion)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v4.6';
@@ -352,20 +352,15 @@ class Store {
   canDeleteNotice(noticeId) {
     const user = this.getCurrentUser();
     if (!user || user.role === 'student') return false;
-    const notice = this.data.notices.find(n => n.id === noticeId);
-    if (!notice) return false;
-    if (user.role === 'admin' || this.isAdminSessionActive()) return true;
-    if (user.role === 'teacher' && notice.authorId === user.id) return true;
-    return false;
+    return true; // All teachers and admins can delete announcements
   }
 
   deleteNotice(noticeId) {
-    if (this.canDeleteNotice(noticeId)) {
-      this.data.notices = this.data.notices.filter(n => n.id !== noticeId);
-      this.saveData();
-      return true;
-    }
-    return false;
+    const user = this.getCurrentUser();
+    if (!user || user.role === 'student') return false;
+    this.data.notices = this.data.notices.filter(n => n.id !== noticeId);
+    this.saveData();
+    return true;
   }
 
   markNoticeRead(noticeId) {
