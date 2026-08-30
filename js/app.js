@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v4.1 Mark All Read Handler)
+// RIS School — Main Controller & Client Router (v4.7 Auto Cloud Sync & Multi-Device Polling)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -17,10 +17,23 @@ class App {
     this.init();
   }
 
-  init() {
+  async init() {
     this.setupRouter();
     this.setupGlobalHandlers();
     this.setupMidnightRolloverCheck();
+    
+    // Auto-sync with cloud database on load
+    if (db.isConnected) {
+      await store.syncWithCloud(db);
+    }
+
+    // Auto-poll cloud database every 5 seconds for live multi-device sync
+    setInterval(async () => {
+      if (db.isConnected) {
+        await store.syncWithCloud(db);
+      }
+    }, 5000);
+
     this.render();
 
     store.subscribe(() => {
@@ -42,7 +55,7 @@ class App {
       }
     }, 30000);
 
-    window.addEventListener('focus', () => {
+    window.addEventListener('focus', async () => {
       const todayStr = new Date().toISOString().split('T')[0];
       if (todayStr !== this.currentDateStr) {
         this.currentDateStr = todayStr;
@@ -51,6 +64,10 @@ class App {
           dateInput.value = todayStr;
           this.loadAttendanceSheet();
         }
+      }
+
+      if (db.isConnected) {
+        await store.syncWithCloud(db);
       }
     });
   }
@@ -187,17 +204,18 @@ class App {
     window.closeDbModal = () => {
       document.getElementById('db-config-modal')?.classList.add('hidden');
     };
-    window.handleSaveDbCredentials = (e) => {
+    window.handleSaveDbCredentials = async (e) => {
       e.preventDefault();
       const form = e.target;
       const url = form.url.value;
       const key = form.key.value;
 
-      db.saveConfig(url, key);
+      const connected = db.saveConfig(url, key);
       window.closeDbModal();
 
-      if (db.isConnected) {
-        this.showToast("Connected to Cloud Database! Real-time sync active.", "success");
+      if (connected || db.isConnected) {
+        this.showToast("Connected to Cloud Database! Syncing...", "success");
+        await store.syncWithCloud(db);
       } else if (url || key) {
         this.showToast("Could not connect to Supabase. Check URL and Key.", "danger");
       } else {
@@ -224,7 +242,7 @@ class App {
         studentFields?.classList.remove('hidden');
       }
     };
-    window.handleUserRegistration = (e) => {
+    window.handleUserRegistration = async (e) => {
       e.preventDefault();
       const form = e.target;
       const role = form.role.value;
@@ -248,14 +266,14 @@ class App {
         return;
       }
 
-      if (db.isConnected) db.saveUser(result.user);
+      if (db.isConnected) await db.saveUser(result.user);
 
       window.closeRegistrationModal();
       this.showToast(`Welcome ${result.user.name}! Registered as ${result.user.role.toUpperCase()}.`, "success");
       window.router.navigate('dashboard');
     };
 
-    window.handleDeleteUser = (userId) => {
+    window.handleDeleteUser = async (userId) => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
         this.showToast("Permission denied: Only Admin can remove user accounts.", "danger");
@@ -264,7 +282,7 @@ class App {
 
       if (confirm("Are you sure you want to remove this user from the school portal?")) {
         store.deleteUser(userId);
-        if (db.isConnected) db.deleteUser(userId);
+        if (db.isConnected) await db.deleteUser(userId);
         this.showToast("User removed.", "warning");
         this.render();
       }
@@ -282,7 +300,7 @@ class App {
     window.closeNoticeModal = () => {
       document.getElementById('create-notice-modal')?.classList.add('hidden');
     };
-    window.handleCreateNotice = (e) => {
+    window.handleCreateNotice = async (e) => {
       e.preventDefault();
       const form = e.target;
       const newNotice = store.addNotice({
@@ -297,13 +315,15 @@ class App {
         return;
       }
 
-      if (db.isConnected) db.saveNotice(newNotice);
+      if (db.isConnected) {
+        await db.saveNotice(newNotice);
+      }
 
       window.closeNoticeModal();
-      this.showToast("Announcement published!", "success");
+      this.showToast("Announcement published & synced to cloud!", "success");
     };
 
-    window.handleDeleteNotice = (noticeId) => {
+    window.handleDeleteNotice = async (noticeId) => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
         this.showToast("Permission denied: Students cannot delete notices.", "danger");
@@ -313,7 +333,7 @@ class App {
       if (confirm("Are you sure you want to delete this notice?")) {
         const deleted = store.deleteNotice(noticeId);
         if (deleted) {
-          if (db.isConnected) db.deleteNotice(noticeId);
+          if (db.isConnected) await db.deleteNotice(noticeId);
           this.showToast("Notice deleted.", "warning");
         } else {
           this.showToast("Permission denied: You can only delete notices you posted.", "danger");
@@ -377,7 +397,7 @@ class App {
       }
     };
 
-    window.saveAttendanceRegister = () => {
+    window.saveAttendanceRegister = async () => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
         this.showToast("Permission Denied: Students cannot save attendance registers.", "danger");
@@ -408,9 +428,9 @@ class App {
       }
 
       if (db.isConnected) {
-        db.saveAttendance(classId, dateStr, "Daily Morning Register", store.getCurrentUser().name, this.attendanceState);
+        await db.saveAttendance(classId, dateStr, "Daily Morning Register", store.getCurrentUser().name, this.attendanceState);
       }
-      this.showToast(`Morning attendance for Class ${classId} saved successfully!`, "success");
+      this.showToast(`Morning attendance for Class ${classId} saved & synced to cloud!`, "success");
     };
 
     window.toggleAuditLogDrawer = () => {

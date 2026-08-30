@@ -1,4 +1,4 @@
-// RIS School — Central State Store (v4.2 Production Security Hardening)
+// RIS School — Central State Store with Cloud Bi-Directional Sync (v4.7)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v4.6';
@@ -58,6 +58,86 @@ class Store {
     this.currentUserId = null;
     this.adminSessionActive = false;
     this.saveData();
+  }
+
+  // --- FULL CLOUD SYNC & RECONCILIATION ---
+  async syncWithCloud(db) {
+    if (!db || !db.isConnected) return;
+    try {
+      // 1. Fetch & Merge Cloud Notices
+      const cloudNotices = await db.fetchNotices();
+      if (cloudNotices && Array.isArray(cloudNotices)) {
+        cloudNotices.forEach(cn => {
+          const mapped = {
+            id: cn.id,
+            title: cn.title,
+            content: cn.content,
+            priority: cn.priority || 'normal',
+            targetAudience: cn.target_audience || 'Whole School',
+            authorId: cn.author_id,
+            authorName: cn.author_name,
+            authorRole: cn.author_role,
+            createdAt: cn.created_at,
+            readBy: cn.read_by || []
+          };
+          const idx = this.data.notices.findIndex(n => n.id === mapped.id);
+          if (idx >= 0) {
+            this.data.notices[idx] = mapped;
+          } else {
+            this.data.notices.unshift(mapped);
+          }
+        });
+      }
+
+      // 2. Fetch & Merge Cloud Attendance
+      const cloudAttendance = await db.fetchAttendance();
+      if (cloudAttendance && Array.isArray(cloudAttendance)) {
+        cloudAttendance.forEach(ca => {
+          if (!this.data.studentAttendance[ca.class_id]) {
+            this.data.studentAttendance[ca.class_id] = {};
+          }
+          this.data.studentAttendance[ca.class_id][ca.date_str] = {
+            period: ca.period || 'Daily Morning Register',
+            markedBy: ca.marked_by,
+            markedAt: ca.marked_at,
+            records: ca.records
+          };
+        });
+      }
+
+      // 3. Fetch & Merge Cloud Users
+      const cloudUsers = await db.fetchUsers();
+      if (cloudUsers && Array.isArray(cloudUsers)) {
+        cloudUsers.forEach(cu => {
+          const idx = this.data.users.findIndex(u => u.id === cu.id);
+          const mapped = {
+            id: cu.id,
+            name: cu.name,
+            email: cu.email,
+            role: cu.role,
+            title: cu.title,
+            classTeacherClass: cu.class_teacher_class,
+            isClassTeacher: !!cu.class_teacher_class,
+            subjects: cu.subjects || ["General"],
+            classId: cu.class_id,
+            rollNo: cu.roll_no,
+            avatar: cu.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150",
+            checkedIn: cu.checked_in || false,
+            checkInTime: cu.check_in_time || null
+          };
+          if (idx >= 0) {
+            this.data.users[idx] = mapped;
+          } else {
+            this.data.users.push(mapped);
+          }
+        });
+      }
+
+      this.saveData();
+      console.log("Cloud DB sync completed successfully.");
+    } catch (e) {
+      console.warn("Cloud DB sync encountered an issue:", e);
+    }
   }
 
   // --- USER AUTH & PRINCIPAL SUPERVISION ---
