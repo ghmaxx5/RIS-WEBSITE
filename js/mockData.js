@@ -1,4 +1,4 @@
-// RIS School — Clean Data Store with Class Teacher Terminology (v3.7)
+// RIS School — Clean Data Store with Full Faculty Roster & 30 Students (v4.5)
 
 export const initialMockData = {
   school: {
@@ -10,6 +10,7 @@ export const initialMockData = {
   },
   
   users: [
+    // 1. DEFAULT ADMIN ACCOUNT
     {
       id: "admin-1",
       name: "School Principal (Admin)",
@@ -19,35 +20,132 @@ export const initialMockData = {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"
     },
 
-    // TEACHERS (Class Teacher 8-A and Class Teacher 8-B)
+    // 2. TEACHERS & FACULTY MEMBERS
     {
-      id: "teacher-1",
-      name: "Mrs. Anjali Sharma",
+      id: "teacher-alina",
+      name: "Alina Ma'am",
       role: "teacher",
-      title: "Class Teacher 8-A & Math Faculty",
-      email: "anjali.sharma@risschool.edu",
+      title: "Class Teacher 8-A & English Faculty",
+      email: "alina@risschool.edu",
       avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150",
       classTeacherClass: "8A",
+      isClassTeacher: true,
+      subjects: ["English"],
+      checkedIn: true,
+      checkInTime: "07:50 AM"
+    },
+    {
+      id: "teacher-swapnil",
+      name: "Swapnil Ma'am",
+      role: "teacher",
+      title: "Class Teacher 8-B & Mathematics Faculty",
+      email: "swapnil@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1580894732413-80c42732c510?auto=format&fit=crop&q=80&w=150",
+      classTeacherClass: "8B",
       isClassTeacher: true,
       subjects: ["Mathematics"],
       checkedIn: true,
       checkInTime: "07:55 AM"
     },
     {
-      id: "teacher-2",
-      name: "Mr. Vikramaditya Verma",
+      id: "teacher-fina",
+      name: "Fina Ma'am",
       role: "teacher",
-      title: "Class Teacher 8-B & Science Faculty",
-      email: "vikram.verma@risschool.edu",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
-      classTeacherClass: "8B",
-      isClassTeacher: true,
+      title: "Science Faculty",
+      email: "fina@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150",
       subjects: ["Science"],
       checkedIn: true,
-      checkInTime: "08:02 AM"
+      checkInTime: "08:00 AM"
+    },
+    {
+      id: "teacher-preeti",
+      name: "Preeti Ma'am",
+      role: "teacher",
+      title: "Hindi Faculty",
+      email: "preeti@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Hindi"],
+      checkedIn: true,
+      checkInTime: "08:05 AM"
+    },
+    {
+      id: "teacher-rohit",
+      name: "Rohit Sir",
+      role: "teacher",
+      title: "Computer Science Faculty",
+      email: "rohit@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Computer Science"],
+      checkedIn: true,
+      checkInTime: "08:00 AM"
+    },
+    {
+      id: "teacher-ritu",
+      name: "Ritu Ma'am",
+      role: "teacher",
+      title: "General Knowledge (GK) Faculty",
+      email: "ritu@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
+      subjects: ["General Knowledge"],
+      checkedIn: false
+    },
+    {
+      id: "teacher-harsh",
+      name: "Harsh Sir",
+      role: "teacher",
+      title: "Physical Education & Games Faculty",
+      email: "harsh@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Games / PE"],
+      checkedIn: true,
+      checkInTime: "07:45 AM"
+    },
+    {
+      id: "teacher-rose",
+      name: "Rose Ma'am",
+      role: "teacher",
+      title: "Physical Education & Games Faculty",
+      email: "rose@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Games / PE"],
+      checkedIn: true,
+      checkInTime: "07:45 AM"
+    },
+    {
+      id: "teacher-lily",
+      name: "Lily Ma'am",
+      role: "teacher",
+      title: "Music Faculty",
+      email: "lily@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Music"],
+      checkedIn: false
+    },
+    {
+      id: "teacher-priyanshi",
+      name: "Priyanshi Ma'am",
+      role: "teacher",
+      title: "Music Faculty",
+      email: "priyanshi@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Music"],
+      checkedIn: true,
+      checkInTime: "08:10 AM"
+    },
+    {
+      id: "teacher-heena",
+      name: "Heena Ma'am",
+      role: "teacher",
+      title: "Art & Craft Faculty",
+      email: "heena@risschool.edu",
+      avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150",
+      subjects: ["Art & Craft"],
+      checkedIn: true,
+      checkInTime: "08:15 AM"
     },
 
-    // CLASS 8-A STUDENTS (15 Students)
+    // 3. CLASS 8-A STUDENTS (15 Students)
     { id: "student-8A-01", name: "Aarav Sharma", role: "student", classId: "8A", rollNo: "8A-01", email: "aarav.s@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8A-02", name: "Ananya Gupta", role: "student", classId: "8A", rollNo: "8A-02", email: "ananya.g@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8A-03", name: "Rohan Patel", role: "student", classId: "8A", rollNo: "8A-03", email: "rohan.p@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150" },
@@ -64,7 +162,7 @@ export const initialMockData = {
     { id: "student-8A-14", name: "Riya Rao", role: "student", classId: "8A", rollNo: "8A-14", email: "riya.r@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8A-15", name: "Siddharth Chopra", role: "student", classId: "8A", rollNo: "8A-15", email: "siddharth.c@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150" },
 
-    // CLASS 8-B STUDENTS (15 Students)
+    // 4. CLASS 8-B STUDENTS (15 Students)
     { id: "student-8B-01", name: "Tanvi Kulkarni", role: "student", classId: "8B", rollNo: "8B-01", email: "tanvi.k@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8B-02", name: "Varun Shah", role: "student", classId: "8B", rollNo: "8B-02", email: "varun.s@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150" },
     { id: "student-8B-03", name: "Sneha Das", role: "student", classId: "8B", rollNo: "8B-03", email: "sneha.d@student.risschool.edu", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150" },
@@ -88,19 +186,22 @@ export const initialMockData = {
   ],
 
   subjects: [
+    "English",
     "Mathematics",
     "Science",
-    "English",
-    "Social Studies",
     "Hindi",
-    "Computer Science"
+    "Computer Science",
+    "General Knowledge",
+    "Games / PE",
+    "Music",
+    "Art & Craft"
   ],
 
   notices: [
     {
       id: "notice-201",
       title: "Welcome to Rose International School Portal",
-      content: "All Class Teachers and students of Class 8-A and Class 8-B are requested to register their profiles. Teachers must enter the official school passcode (RIS2026) to complete teacher registration.",
+      content: "All Class Teachers, subject faculty, and students of Class 8-A and Class 8-B are requested to register their profiles. Teachers must enter the official school passcode (RIS2026) to complete teacher registration.",
       priority: "important",
       targetAudience: "Whole School",
       authorId: "admin-1",
@@ -122,7 +223,7 @@ export const initialMockData = {
       actorName: "System",
       actorRole: "Admin",
       action: "SECURITY_INIT",
-      details: "Rose International School Portal initialized with Class Teacher assignments for Class 8-A and Class 8-B."
+      details: "Rose International School Portal initialized with full faculty roster and Class 8-A & 8-B students."
     }
   ]
 };

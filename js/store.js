@@ -1,7 +1,7 @@
 // RIS School — Central State Store (v4.2 Production Security Hardening)
 import { initialMockData } from './mockData.js';
 
-const STORAGE_KEY = 'ris_school_app_data_v3.7';
+const STORAGE_KEY = 'ris_school_app_data_v4.5';
 
 class Store {
   constructor() {
