@@ -4,8 +4,7 @@
   "description": "Rose International School (RIS) — Academic Portal & Teacher Management Native Mobile App",
   "main": "index.html",
   "scripts": {
-    "build": "echo Web assets ready for Capacitor",
-    "cap:add:android": "cap add android",
+    "cap:build": "node build.js",
     "cap:sync": "cap sync",
     "cap:open:android": "cap open android",
     "cap:run:android": "cap run android"

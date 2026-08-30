@@ -1,0 +1,6 @@
+android/
+.gradle/
+*.apk
+build.js
+capacitor.config.json
+www/
