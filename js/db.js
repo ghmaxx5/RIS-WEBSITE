@@ -1,4 +1,7 @@
-// RIS School — Cloud Database Client (Supabase / PostgreSQL Integration)
+// RIS School — Cloud Database Client (Embedded Supabase Integration)
+
+const DEFAULT_SUPABASE_URL = "https://mqrytfngbnwxolatcnng.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcnl0Zm5nYm53eG9sYXRjbm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwODE5ODIsImV4cCI6MjEwMzY1Nzk4Mn0.iZAgRly0aglUMmW8-o3EXyJVb282ifMa-7xZt_RlpEs";
 
 class DatabaseService {
   constructor() {
@@ -14,16 +17,19 @@ class DatabaseService {
   loadConfig() {
     try {
       const saved = localStorage.getItem('ris_db_credentials');
-      return saved ? JSON.parse(saved) : { url: '', key: '' };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.url && parsed.key) return parsed;
+      }
     } catch (e) {
-      return { url: '', key: '' };
+      // ignore
     }
+    return { url: DEFAULT_SUPABASE_URL, key: DEFAULT_SUPABASE_ANON_KEY };
   }
 
   saveConfig(url, key) {
-    // Automatically sanitize URL to base Supabase format
-    const cleanUrl = url ? url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '') : '';
-    const cleanKey = key ? key.trim() : '';
+    const cleanUrl = url ? url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '') : DEFAULT_SUPABASE_URL;
+    const cleanKey = key ? key.trim() : DEFAULT_SUPABASE_ANON_KEY;
 
     localStorage.setItem('ris_db_credentials', JSON.stringify({ url: cleanUrl, key: cleanKey }));
     this.config = { url: cleanUrl, key: cleanKey };
@@ -31,14 +37,8 @@ class DatabaseService {
   }
 
   connect(url, key) {
-    if (!url || !key) {
-      this.isConnected = false;
-      this.client = null;
-      return false;
-    }
-
-    const cleanUrl = url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
-    const cleanKey = key.trim();
+    const cleanUrl = (url || DEFAULT_SUPABASE_URL).trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+    const cleanKey = (key || DEFAULT_SUPABASE_ANON_KEY).trim();
 
     if (window.supabase && cleanUrl && cleanKey) {
       try {
