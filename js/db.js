@@ -160,6 +160,7 @@ class DatabaseService {
   async saveAttendance(classId, dateStr, period, markedBy, records) {
     if (!this.isConnected) return false;
     try {
+      const nowIso = new Date().toISOString();
       const { data: existing, error: fetchErr } = await this.client
         .from('student_attendance')
         .select('id')
@@ -174,7 +175,7 @@ class DatabaseService {
             period: period || 'Daily Morning Register',
             marked_by: markedBy,
             records: records,
-            marked_at: new Date().toISOString()
+            marked_at: nowIso
           })
           .eq('class_id', classId)
           .eq('date_str', dateStr);
@@ -190,7 +191,7 @@ class DatabaseService {
             period: period || 'Daily Morning Register',
             marked_by: markedBy,
             records: records,
-            marked_at: new Date().toISOString()
+            marked_at: nowIso
           });
         if (error) console.error("Error inserting attendance:", error);
         return !error;

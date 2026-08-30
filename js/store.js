@@ -133,7 +133,7 @@ class Store {
         }
       }
 
-      // 3. ATTENDANCE: Sync from Supabase Cloud
+      // 3. ATTENDANCE: Sync from Supabase Cloud (with timestamp comparison)
       const cloudAttendance = await db.fetchAttendance();
       if (cloudAttendance && Array.isArray(cloudAttendance)) {
         cloudAttendance.forEach(ca => {
@@ -148,9 +148,16 @@ class Store {
             markedAt: ca.marked_at,
             records: ca.records
           };
-          if (!existing || JSON.stringify(existing) !== JSON.stringify(newObj)) {
-            this.data.studentAttendance[ca.class_id][ca.date_str] = newObj;
-            hasChanges = true;
+
+          const localTime = existing && existing.markedAt ? new Date(existing.markedAt).getTime() : 0;
+          const cloudTime = ca.marked_at ? new Date(ca.marked_at).getTime() : 0;
+
+          // Only apply cloud state if local has no record OR cloud is newer/equal
+          if (!existing || cloudTime >= localTime) {
+            if (!existing || JSON.stringify(existing) !== JSON.stringify(newObj)) {
+              this.data.studentAttendance[ca.class_id][ca.date_str] = newObj;
+              hasChanges = true;
+            }
           }
         });
       }

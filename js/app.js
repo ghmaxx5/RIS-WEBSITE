@@ -484,7 +484,7 @@ class App {
           const dateStr = dateInput.value;
           store.saveStudentAttendance(classId, dateStr, this.attendanceState, true);
           if (db.isConnected) {
-            db.saveAttendance(classId, dateStr, "Daily Morning Register", currentUser.name, this.attendanceState);
+            await db.saveAttendance(classId, dateStr, "Daily Morning Register", currentUser.name, this.attendanceState);
           }
         }
       }
