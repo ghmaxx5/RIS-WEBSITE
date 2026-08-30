@@ -21,6 +21,8 @@ class Store {
         const parsed = JSON.parse(saved);
         const studentCount = parsed.users ? parsed.users.filter(u => u.role === 'student').length : 0;
         if (studentCount >= 20) {
+          // Notices are NEVER loaded from localStorage — always fetched fresh from Supabase
+          parsed.notices = [];
           return parsed;
         }
       }
@@ -28,19 +30,26 @@ class Store {
       console.warn("Initializing fresh store data", e);
     }
     
-    this.saveData(initialMockData);
-    return JSON.parse(JSON.stringify(initialMockData));
+    const fresh = JSON.parse(JSON.stringify(initialMockData));
+    // Start with empty notices — cloud sync will populate them
+    fresh.notices = [];
+    this.saveData(fresh);
+    return fresh;
   }
 
   saveData(data = this.data) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      // Save everything EXCEPT notices to localStorage
+      // Notices are kept in memory only and fetched fresh from Supabase on each page load
+      const toSave = { ...data, notices: [] };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
       this.data = data;
       this.notifyListeners();
     } catch (e) {
       console.error("Failed to save state to localStorage", e);
     }
   }
+
 
   subscribe(listener) {
     this.listeners.push(listener);
