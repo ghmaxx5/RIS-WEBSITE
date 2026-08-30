@@ -22,12 +22,12 @@ class App {
     this.setupGlobalHandlers();
     this.setupMidnightRolloverCheck();
     
-    // Initial cloud sync
+    // Sync notices ONCE on page load — never in background (prevents resurrection bug)
     if (db.isConnected) {
-      await store.syncWithCloud(db);
+      await store.syncNoticesOnce(db);
     }
 
-    // Silent background cloud check
+    // Background poll: leave requests + attendance + users (NOT notices)
     setInterval(async () => {
       if (db.isConnected) {
         await store.syncWithCloud(db);
@@ -70,7 +70,11 @@ class App {
         }
       }
 
+      // On tab focus: sync other data; only sync notices if nothing is pending deletion
       if (db.isConnected) {
+        if (store.pendingDeletedNotices.size === 0) {
+          await store.syncNoticesOnce(db);
+        }
         await store.syncWithCloud(db);
       }
     });

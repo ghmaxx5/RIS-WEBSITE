@@ -63,16 +63,15 @@ class Store {
     this.saveData();
   }
 
-  // --- DEFINITIVE CLOUD SYNC (SUPABASE SINGLE SOURCE OF TRUTH) ---
-  async syncWithCloud(db) {
+  // --- INITIAL LOAD: Sync notices from cloud ONCE on page load ---
+  async syncNoticesOnce(db) {
     if (!db || !db.isConnected) return;
     try {
-      let hasChanges = false;
-
-      // 1. NOTICES: Sync authoritative list from Supabase
       const cloudNotices = await db.fetchNotices();
-      if (cloudNotices && Array.isArray(cloudNotices)) {
-        const mappedList = cloudNotices.map(cn => ({
+      if (!cloudNotices || !Array.isArray(cloudNotices)) return;
+
+      const mappedList = cloudNotices
+        .map(cn => ({
           id: cn.id,
           title: cn.title,
           content: cn.content,
@@ -83,16 +82,24 @@ class Store {
           authorRole: cn.author_role,
           createdAt: cn.created_at,
           readBy: cn.read_by || []
-        }));
+        }))
+        // NEVER re-add any notice that was locally deleted
+        .filter(n => !this.pendingDeletedNotices.has(n.id));
 
-        // Filter out any notices we have already deleted locally (in-flight delete to Supabase)
-        const filteredList = mappedList.filter(n => !this.pendingDeletedNotices.has(n.id));
-
-        if (JSON.stringify(this.data.notices) !== JSON.stringify(filteredList)) {
-          this.data.notices = filteredList;
-          hasChanges = true;
-        }
+      if (JSON.stringify(this.data.notices) !== JSON.stringify(mappedList)) {
+        this.data.notices = mappedList;
+        this.saveData();
       }
+    } catch (e) {
+      console.warn("Notice sync failed:", e);
+    }
+  }
+
+  // --- BACKGROUND POLL: Sync everything EXCEPT notices ---
+  async syncWithCloud(db) {
+    if (!db || !db.isConnected) return;
+    try {
+      let hasChanges = false;
 
       // 2. LEAVE REQUESTS: Sync authoritative list from Supabase
       const cloudLeaves = await db.fetchLeaveRequests();
