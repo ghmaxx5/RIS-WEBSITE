@@ -1,4 +1,4 @@
-// RIS School — Central State Store with Cloud Bi-Directional Sync (v4.7)
+// RIS School — Central State Store with Intelligent Diff Cloud Sync (v4.8 Zero Flicker)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v4.6';
@@ -60,11 +60,13 @@ class Store {
     this.saveData();
   }
 
-  // --- FULL CLOUD SYNC & RECONCILIATION ---
+  // --- INTELLIGENT DIFF CLOUD SYNC (ZERO FLICKER) ---
   async syncWithCloud(db) {
     if (!db || !db.isConnected) return;
     try {
-      // 1. Fetch & Merge Cloud Notices
+      let hasChanges = false;
+
+      // 1. Fetch & Merge Cloud Notices (Only if different)
       const cloudNotices = await db.fetchNotices();
       if (cloudNotices && Array.isArray(cloudNotices)) {
         cloudNotices.forEach(cn => {
@@ -82,30 +84,40 @@ class Store {
           };
           const idx = this.data.notices.findIndex(n => n.id === mapped.id);
           if (idx >= 0) {
-            this.data.notices[idx] = mapped;
+            if (JSON.stringify(this.data.notices[idx]) !== JSON.stringify(mapped)) {
+              this.data.notices[idx] = mapped;
+              hasChanges = true;
+            }
           } else {
             this.data.notices.unshift(mapped);
+            hasChanges = true;
           }
         });
       }
 
-      // 2. Fetch & Merge Cloud Attendance
+      // 2. Fetch & Merge Cloud Attendance (Only if different)
       const cloudAttendance = await db.fetchAttendance();
       if (cloudAttendance && Array.isArray(cloudAttendance)) {
         cloudAttendance.forEach(ca => {
           if (!this.data.studentAttendance[ca.class_id]) {
             this.data.studentAttendance[ca.class_id] = {};
+            hasChanges = true;
           }
-          this.data.studentAttendance[ca.class_id][ca.date_str] = {
+          const existing = this.data.studentAttendance[ca.class_id][ca.date_str];
+          const newObj = {
             period: ca.period || 'Daily Morning Register',
             markedBy: ca.marked_by,
             markedAt: ca.marked_at,
             records: ca.records
           };
+          if (!existing || JSON.stringify(existing) !== JSON.stringify(newObj)) {
+            this.data.studentAttendance[ca.class_id][ca.date_str] = newObj;
+            hasChanges = true;
+          }
         });
       }
 
-      // 3. Fetch & Merge Cloud Users
+      // 3. Fetch & Merge Cloud Users (Only if different)
       const cloudUsers = await db.fetchUsers();
       if (cloudUsers && Array.isArray(cloudUsers)) {
         cloudUsers.forEach(cu => {
@@ -126,17 +138,23 @@ class Store {
             checkInTime: cu.check_in_time || null
           };
           if (idx >= 0) {
-            this.data.users[idx] = mapped;
+            if (JSON.stringify(this.data.users[idx]) !== JSON.stringify(mapped)) {
+              this.data.users[idx] = mapped;
+              hasChanges = true;
+            }
           } else {
             this.data.users.push(mapped);
+            hasChanges = true;
           }
         });
       }
 
-      this.saveData();
-      console.log("Cloud DB sync completed successfully.");
+      // Only trigger UI update if actual new data arrived!
+      if (hasChanges) {
+        this.saveData();
+      }
     } catch (e) {
-      console.warn("Cloud DB sync encountered an issue:", e);
+      console.warn("Cloud DB sync issue:", e);
     }
   }
 

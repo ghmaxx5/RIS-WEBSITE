@@ -1,4 +1,4 @@
-// RIS School — Main Controller & Client Router (v4.7 Auto Cloud Sync & Multi-Device Polling)
+// RIS School — Main Controller & Client Router (v4.8 Smooth Zero-Flicker Background Sync)
 import { store } from './store.js';
 import { db } from './db.js';
 import { renderNavbar, setupNavbarEvents } from './components/navbar.js';
@@ -22,22 +22,27 @@ class App {
     this.setupGlobalHandlers();
     this.setupMidnightRolloverCheck();
     
-    // Auto-sync with cloud database on load
+    // Initial cloud sync
     if (db.isConnected) {
       await store.syncWithCloud(db);
     }
 
-    // Auto-poll cloud database every 5 seconds for live multi-device sync
+    // Silent background cloud check (only re-renders if actual new cloud data exists)
     setInterval(async () => {
       if (db.isConnected) {
         await store.syncWithCloud(db);
       }
-    }, 5000);
+    }, 10000);
 
     this.render();
 
     store.subscribe(() => {
-      this.render();
+      // Don't interrupt user if currently typing in an input or textarea
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+      if (!isTyping) {
+        this.render();
+      }
     });
   }
 
