@@ -1,4 +1,4 @@
-// RIS School — Clean Data Store with Full Faculty Roster & 30 Students (v4.5)
+// RIS School — Clean Data Store with Full Faculty Roster & 30 Students (v4.6)
 
 export const initialMockData = {
   school: {
@@ -20,10 +20,10 @@ export const initialMockData = {
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"
     },
 
-    // 2. TEACHERS & FACULTY MEMBERS
+    // 2. TEACHERS & FACULTY MEMBERS (With Subject Name Included in Name)
     {
       id: "teacher-alina",
-      name: "Alina Ma'am",
+      name: "Alina Ma'am (English)",
       role: "teacher",
       title: "Class Teacher 8-A & English Faculty",
       email: "alina@risschool.edu",
@@ -36,7 +36,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-swapnil",
-      name: "Swapnil Ma'am",
+      name: "Swapnil Ma'am (Maths)",
       role: "teacher",
       title: "Class Teacher 8-B & Mathematics Faculty",
       email: "swapnil@risschool.edu",
@@ -49,7 +49,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-fina",
-      name: "Fina Ma'am",
+      name: "Fina Ma'am (Science)",
       role: "teacher",
       title: "Science Faculty",
       email: "fina@risschool.edu",
@@ -60,7 +60,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-preeti",
-      name: "Preeti Ma'am",
+      name: "Preeti Ma'am (Hindi)",
       role: "teacher",
       title: "Hindi Faculty",
       email: "preeti@risschool.edu",
@@ -71,7 +71,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-rohit",
-      name: "Rohit Sir",
+      name: "Rohit Sir (Computer)",
       role: "teacher",
       title: "Computer Science Faculty",
       email: "rohit@risschool.edu",
@@ -82,7 +82,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-ritu",
-      name: "Ritu Ma'am",
+      name: "Ritu Ma'am (GK)",
       role: "teacher",
       title: "General Knowledge (GK) Faculty",
       email: "ritu@risschool.edu",
@@ -92,7 +92,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-harsh",
-      name: "Harsh Sir",
+      name: "Harsh Sir (Games)",
       role: "teacher",
       title: "Physical Education & Games Faculty",
       email: "harsh@risschool.edu",
@@ -103,7 +103,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-rose",
-      name: "Rose Ma'am",
+      name: "Rose Ma'am (Games)",
       role: "teacher",
       title: "Physical Education & Games Faculty",
       email: "rose@risschool.edu",
@@ -114,7 +114,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-lily",
-      name: "Lily Ma'am",
+      name: "Lily Ma'am (Music)",
       role: "teacher",
       title: "Music Faculty",
       email: "lily@risschool.edu",
@@ -124,7 +124,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-priyanshi",
-      name: "Priyanshi Ma'am",
+      name: "Priyanshi Ma'am (Music)",
       role: "teacher",
       title: "Music Faculty",
       email: "priyanshi@risschool.edu",
@@ -135,7 +135,7 @@ export const initialMockData = {
     },
     {
       id: "teacher-heena",
-      name: "Heena Ma'am",
+      name: "Heena Ma'am (Art & Craft)",
       role: "teacher",
       title: "Art & Craft Faculty",
       email: "heena@risschool.edu",
