@@ -1,4 +1,4 @@
-﻿// RIS School App — Native Bridge (Capacitor 6 Hardware & OS Integration)
+// RIS School App — Native Bridge (Capacitor 6 Hardware & OS Integration)
 // Seamlessly operates in both Web Browsers and Native Android / iOS Containers.
 
 class NativeBridge {
@@ -10,9 +10,9 @@ class NativeBridge {
 
   async init(appInstance) {
     this.app = appInstance;
-    this.isNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
+    this.isNative = typeof window !== 'undefined' && !!window.Capacitor && window.Capacitor.isNativePlatform();
 
-    console.log([NativeBridge] Initializing... Native Platform: );
+    console.log('[NativeBridge] Initializing... Native Platform:', this.isNative);
 
     if (this.isNative) {
       await this.initNativePlugins();
@@ -30,10 +30,10 @@ class NativeBridge {
     try {
       if (window.Capacitor && window.Capacitor.Plugins) {
         this.plugins = window.Capacitor.Plugins;
-        console.log([NativeBridge] Native plugins loaded:, Object.keys(this.plugins));
+        console.log('[NativeBridge] Native plugins loaded:', Object.keys(this.plugins));
       }
     } catch (e) {
-      console.warn([NativeBridge] Plugin loading exception:, e);
+      console.warn('[NativeBridge] Plugin loading exception:', e);
     }
   }
 
@@ -46,7 +46,7 @@ class NativeBridge {
         await StatusBar.setOverlaysWebView({ overlay: false });
       }
     } catch (e) {
-      console.warn([NativeBridge] StatusBar setup issue:, e);
+      console.warn('[NativeBridge] StatusBar setup issue:', e);
     }
   }
 
@@ -54,7 +54,7 @@ class NativeBridge {
     try {
       const { App } = this.plugins;
       if (App) {
-        App.addListener('backButton', ({ canGoBack }) => {
+        App.addListener('backButton', () => {
           // 1. Close open modals first
           const openModals = document.querySelectorAll('.fixed.inset-0:not(.hidden), #audit-log-drawer:not(.hidden)');
           if (openModals && openModals.length > 0) {
@@ -73,7 +73,7 @@ class NativeBridge {
         });
       }
     } catch (e) {
-      console.warn([NativeBridge] Back button listener issue:, e);
+      console.warn('[NativeBridge] Back button listener issue:', e);
     }
   }
 
@@ -83,16 +83,15 @@ class NativeBridge {
       if (LocalNotifications) {
         const status = await LocalNotifications.requestPermissions();
         this.hasNotificationPermission = status.display === 'granted';
-        console.log([NativeBridge] Notification permission status:, status.display);
+        console.log('[NativeBridge] Notification permission status:', status.display);
       }
     } catch (e) {
-      console.warn([NativeBridge] Notification permission request issue:, e);
+      console.warn('[NativeBridge] Notification permission request issue:', e);
     }
   }
 
   setupWebNotificationFallback() {
     if ('Notification' in window && Notification.permission === 'default') {
-      // Prompt user on first relevant action
       this.hasNotificationPermission = Notification.permission === 'granted';
     }
   }
@@ -104,79 +103,79 @@ class NativeBridge {
           notifications: [
             {
               id: Math.floor(Math.random() * 1000000),
-              title: title || RIS School Notification,
-              body: body || ",
- schedule: { at: new Date(Date.now() + 100) },
- sound: 'beep.wav',
- attachments: undefined,
- actionTypeId: ,
- extra: extra
- }
- ]
- });
- return true;
- }
+              title: title || 'RIS School Notification',
+              body: body || '',
+              schedule: { at: new Date(Date.now() + 100) },
+              sound: 'beep.wav',
+              attachments: undefined,
+              actionTypeId: '',
+              extra: extra
+            }
+          ]
+        });
+        return true;
+      }
 
- // Browser Web Notification fallback
- if ('Notification' in window && Notification.permission === 'granted') {
- new Notification(title, {
- body,
- icon: './assets/icon.png',
- badge: './assets/icon.png'
- });
- return true;
- }
- } catch (e) {
- console.warn([NativeBridge] Notification dispatch exception:, e);
- }
- return false;
- }
+      // Browser Web Notification fallback
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: './assets/icon.png',
+          badge: './assets/icon.png'
+        });
+        return true;
+      }
+    } catch (e) {
+      console.warn('[NativeBridge] Notification dispatch exception:', e);
+    }
+    return false;
+  }
 
- async triggerHaptic(type = 'light') {
- try {
- if (this.isNative && this.plugins.Haptics) {
- const { Haptics, ImpactStyle } = this.plugins;
- const style = type === 'medium' ? 'MEDIUM' : (type === 'heavy' ? 'HEAVY' : 'LIGHT');
- await Haptics.impact({ style });
- } else if (navigator && navigator.vibrate) {
- navigator.vibrate(type === 'medium' ? 30 : 15);
- }
- } catch (e) {
- // Haptics unsupported or silent fail
- }
- }
+  async triggerHaptic(type = 'light') {
+    try {
+      if (this.isNative && this.plugins.Haptics) {
+        const { Haptics, ImpactStyle } = this.plugins;
+        const style = type === 'medium' ? 'MEDIUM' : (type === 'heavy' ? 'HEAVY' : 'LIGHT');
+        await Haptics.impact({ style });
+      } else if (navigator && navigator.vibrate) {
+        navigator.vibrate(type === 'medium' ? 30 : 15);
+      }
+    } catch (e) {
+      // Silent fail if haptics unsupported
+    }
+  }
 
- setupNetworkMonitor() {
- const handleReconnection = async () => {
- console.log([NativeBridge] Network reconnected! Syncing database...);
- if (this.app && window.store && window.db) {
- await window.store.syncNoticesOnce(window.db);
- await window.store.syncWithCloud(window.db);
- if (this.app.showToast) {
- this.app.showToast(⚡ Back online: Database synced!, success);
- }
- }
- };
+  setupNetworkMonitor() {
+    const handleReconnection = async () => {
+      console.log('[NativeBridge] Network reconnected! Syncing database...');
+      if (this.app && window.store && window.db) {
+        await window.store.syncNoticesOnce(window.db);
+        await window.store.syncWithCloud(window.db);
+        if (this.app.showToast) {
+          this.app.showToast('⚡ Back online: Database synced!', 'success');
+        }
+      }
+    };
 
- window.addEventListener('online', handleReconnection);
- window.addEventListener('offline', () => {
- if (this.app && this.app.showToast) {
- this.app.showToast(📡 Offline mode active: Changes will sync when reconnected., warning);
- }
- });
+    window.addEventListener('online', handleReconnection);
+    window.addEventListener('offline', () => {
+      if (this.app && this.app.showToast) {
+        this.app.showToast('📡 Offline mode active: Changes will sync when reconnected.', 'warning');
+      }
+    });
 
- try {
- if (this.isNative && this.plugins.Network) {
- this.plugins.Network.addListener('networkStatusChange', status => {
- if (status.connected) {
- handleReconnection();
- }
- });
- }
- } catch (e) {
- console.warn([NativeBridge] Native network listener error:, e);
- }
- }
+    try {
+      if (this.isNative && this.plugins.Network) {
+        this.plugins.Network.addListener('networkStatusChange', status => {
+          if (status.connected) {
+            handleReconnection();
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('[NativeBridge] Native network listener error:', e);
+    }
+  }
 }
 
 export const nativeBridge = new NativeBridge();

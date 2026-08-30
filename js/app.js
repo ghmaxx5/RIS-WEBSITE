@@ -26,13 +26,20 @@ class App {
     this.setupGlobalHandlers();
     this.setupMidnightRolloverCheck();
     
-    // Initialize Native Mobile Bridge (hardware back button, status bar, notifications)
-    await nativeBridge.init(this);
+    // 1. Render immediately so screen is NEVER blank on launch
+    this.render();
 
-    // Initial cloud sync (notices once, and attendance/leaves/users)
+    // 2. Initialize Native Mobile Bridge
+    nativeBridge.init(this).catch(e => console.warn("Native bridge init exception:", e));
+
+    // 3. Initial cloud sync (notices once, and attendance/leaves/users)
     if (db.isConnected) {
-      await store.syncNoticesOnce(db);
-      await store.syncWithCloud(db);
+      try {
+        await store.syncNoticesOnce(db);
+        await store.syncWithCloud(db);
+      } catch (e) {
+        console.warn("Initial sync issue:", e);
+      }
     }
 
     // Background poll: leave requests + attendance + users (NOT notices)
@@ -41,8 +48,6 @@ class App {
         await store.syncWithCloud(db);
       }
     }, 10000);
-
-    this.render();
 
     store.subscribe(() => {
       const activeEl = document.activeElement;
