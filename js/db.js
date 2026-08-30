@@ -160,19 +160,22 @@ class DatabaseService {
   async saveAttendance(classId, dateStr, period, markedBy, records) {
     if (!this.isConnected) return false;
     try {
-      // First check if row exists
-      const { data: existing } = await this.client
+      const { data: existing, error: fetchErr } = await this.client
         .from('student_attendance')
         .select('id')
         .eq('class_id', classId)
-        .eq('date_str', dateStr)
-        .single();
+        .eq('date_str', dateStr);
 
-      if (existing) {
+      if (existing && existing.length > 0) {
         // Update existing row
         const { error } = await this.client
           .from('student_attendance')
-          .update({ period, marked_by: markedBy, records })
+          .update({
+            period: period || 'Daily Morning Register',
+            marked_by: markedBy,
+            records: records,
+            marked_at: new Date().toISOString()
+          })
           .eq('class_id', classId)
           .eq('date_str', dateStr);
         if (error) console.error("Error updating attendance:", error);
@@ -181,7 +184,14 @@ class DatabaseService {
         // Insert new row
         const { error } = await this.client
           .from('student_attendance')
-          .insert({ class_id: classId, date_str: dateStr, period, marked_by: markedBy, records });
+          .insert({
+            class_id: classId,
+            date_str: dateStr,
+            period: period || 'Daily Morning Register',
+            marked_by: markedBy,
+            records: records,
+            marked_at: new Date().toISOString()
+          });
         if (error) console.error("Error inserting attendance:", error);
         return !error;
       }

@@ -22,9 +22,10 @@ class App {
     this.setupGlobalHandlers();
     this.setupMidnightRolloverCheck();
     
-    // Sync notices ONCE on page load — never in background (prevents resurrection bug)
+    // Initial cloud sync (notices once, and attendance/leaves/users)
     if (db.isConnected) {
       await store.syncNoticesOnce(db);
+      await store.syncWithCloud(db);
     }
 
     // Background poll: leave requests + attendance + users (NOT notices)
@@ -436,7 +437,7 @@ class App {
       this.loadAttendanceSheet();
     };
 
-    window.markAllPresent = () => {
+    window.markAllPresent = async () => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
         this.showToast("Permission Denied: Students cannot mark attendance.", "danger");
@@ -447,10 +448,21 @@ class App {
         this.attendanceState[studentId].status = 'present';
       });
       this.renderRosterRows();
+
+      const classSelect = document.getElementById('att-class-select');
+      const dateInput = document.getElementById('att-date-input');
+      if (classSelect && dateInput) {
+        const classId = classSelect.value;
+        const dateStr = dateInput.value;
+        store.saveStudentAttendance(classId, dateStr, this.attendanceState, true);
+        if (db.isConnected) {
+          await db.saveAttendance(classId, dateStr, "Daily Morning Register", currentUser.name, this.attendanceState);
+        }
+      }
       this.showToast("All students marked Present!", "info");
     };
 
-    window.setStudentStatus = (studentId, status) => {
+    window.setStudentStatus = async (studentId, status) => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
         this.showToast("Permission Denied: Students cannot edit attendance.", "danger");
@@ -464,6 +476,17 @@ class App {
           this.attendanceState[studentId].status = status;
         }
         this.renderRosterRows();
+
+        const classSelect = document.getElementById('att-class-select');
+        const dateInput = document.getElementById('att-date-input');
+        if (classSelect && dateInput) {
+          const classId = classSelect.value;
+          const dateStr = dateInput.value;
+          store.saveStudentAttendance(classId, dateStr, this.attendanceState, true);
+          if (db.isConnected) {
+            db.saveAttendance(classId, dateStr, "Daily Morning Register", currentUser.name, this.attendanceState);
+          }
+        }
       }
     };
 
@@ -498,7 +521,7 @@ class App {
       }
 
       if (db.isConnected) {
-        await db.saveAttendance(classId, dateStr, "Daily Morning Register", store.getCurrentUser().name, this.attendanceState);
+        await db.saveAttendance(classId, dateStr, "Daily Morning Register", currentUser.name, this.attendanceState);
       }
       this.showToast(`Morning attendance for Class ${classId} saved & synced to cloud!`, "success");
     };

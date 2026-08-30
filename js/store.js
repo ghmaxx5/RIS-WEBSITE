@@ -418,7 +418,7 @@ class Store {
     return null;
   }
 
-  saveStudentAttendance(classId, dateStr, records) {
+  saveStudentAttendance(classId, dateStr, records, silent = false) {
     const user = this.getCurrentUser();
     if (!user || user.role === 'student') return false;
 
@@ -449,7 +449,16 @@ class Store {
     };
     this.data.auditLogs.unshift(auditEntry);
 
-    this.saveData();
+    if (silent) {
+      try {
+        const toSave = { ...this.data, notices: [] };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+      } catch (e) {
+        console.error("Failed to save state to localStorage", e);
+      }
+    } else {
+      this.saveData();
+    }
     return true;
   }
 
