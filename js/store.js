@@ -9,6 +9,7 @@ class Store {
     this.currentUserId = localStorage.getItem('ris_current_user_id') || null;
     this.adminSessionActive = localStorage.getItem('ris_admin_session_active') === 'true';
     this.listeners = [];
+    this.pendingDeletedNotices = new Set(); // IDs deleted locally but Supabase delete may still be in-flight
   }
 
   loadData() {
@@ -82,8 +83,11 @@ class Store {
           readBy: cn.read_by || []
         }));
 
-        if (JSON.stringify(this.data.notices) !== JSON.stringify(mappedList)) {
-          this.data.notices = mappedList;
+        // Filter out any notices we have already deleted locally (in-flight delete to Supabase)
+        const filteredList = mappedList.filter(n => !this.pendingDeletedNotices.has(n.id));
+
+        if (JSON.stringify(this.data.notices) !== JSON.stringify(filteredList)) {
+          this.data.notices = filteredList;
           hasChanges = true;
         }
       }
@@ -358,6 +362,8 @@ class Store {
   deleteNotice(noticeId) {
     const user = this.getCurrentUser();
     if (!user || user.role === 'student') return false;
+    // Mark as deleted immediately so background sync never re-adds it
+    this.pendingDeletedNotices.add(noticeId);
     this.data.notices = this.data.notices.filter(n => n.id !== noticeId);
     this.saveData();
     return true;

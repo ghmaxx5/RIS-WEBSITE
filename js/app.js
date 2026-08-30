@@ -344,13 +344,18 @@ class App {
       }
 
       if (confirm("Are you sure you want to delete this notice?")) {
-        const deleted = store.deleteNotice(noticeId);
-        if (deleted) {
-          if (db.isConnected) await db.deleteNotice(noticeId);
-          this.showToast("Notice deleted permanently.", "warning");
-          this.render();
+        // Delete from local state immediately — pendingDeletedNotices prevents sync from re-adding it
+        store.deleteNotice(noticeId);
+        this.render();
+        this.showToast("Notice deleted.", "warning");
+
+        // Then clean from Supabase in background
+        if (db.isConnected) {
+          await db.deleteNotice(noticeId);
+          // Only clear from pending set after confirmed Supabase deletion
+          store.pendingDeletedNotices.delete(noticeId);
         } else {
-          this.showToast("Permission denied: You can only delete notices you posted.", "danger");
+          store.pendingDeletedNotices.delete(noticeId);
         }
       }
     };

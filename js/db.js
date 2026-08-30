@@ -123,6 +123,7 @@ class DatabaseService {
         author_id: notice.authorId,
         author_name: notice.authorName,
         author_role: notice.authorRole,
+        created_at: notice.createdAt,
         read_by: notice.readBy || []
       });
       if (error) console.error("Error upserting notice in Supabase:", error);
@@ -137,6 +138,7 @@ class DatabaseService {
     if (!this.isConnected) return false;
     try {
       const { error } = await this.client.from('notices').delete().eq('id', noticeId);
+      if (error) console.error("Error deleting notice:", error);
       return !error;
     } catch (e) {
       return false;
@@ -158,15 +160,31 @@ class DatabaseService {
   async saveAttendance(classId, dateStr, period, markedBy, records) {
     if (!this.isConnected) return false;
     try {
-      const { error } = await this.client.from('student_attendance').upsert({
-        class_id: classId,
-        date_str: dateStr,
-        period: period,
-        marked_by: markedBy,
-        records: records
-      });
-      if (error) console.error("Error saving attendance to Supabase:", error);
-      return !error;
+      // First check if row exists
+      const { data: existing } = await this.client
+        .from('student_attendance')
+        .select('id')
+        .eq('class_id', classId)
+        .eq('date_str', dateStr)
+        .single();
+
+      if (existing) {
+        // Update existing row
+        const { error } = await this.client
+          .from('student_attendance')
+          .update({ period, marked_by: markedBy, records })
+          .eq('class_id', classId)
+          .eq('date_str', dateStr);
+        if (error) console.error("Error updating attendance:", error);
+        return !error;
+      } else {
+        // Insert new row
+        const { error } = await this.client
+          .from('student_attendance')
+          .insert({ class_id: classId, date_str: dateStr, period, marked_by: markedBy, records });
+        if (error) console.error("Error inserting attendance:", error);
+        return !error;
+      }
     } catch (e) {
       console.error("Exception in saveAttendance:", e);
       return false;
