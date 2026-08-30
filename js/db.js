@@ -21,16 +21,30 @@ class DatabaseService {
   }
 
   saveConfig(url, key) {
-    localStorage.setItem('ris_db_credentials', JSON.stringify({ url, key }));
-    this.connect(url, key);
+    // Automatically sanitize URL to base Supabase format
+    const cleanUrl = url ? url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '') : '';
+    const cleanKey = key ? key.trim() : '';
+
+    localStorage.setItem('ris_db_credentials', JSON.stringify({ url: cleanUrl, key: cleanKey }));
+    this.config = { url: cleanUrl, key: cleanKey };
+    return this.connect(cleanUrl, cleanKey);
   }
 
   connect(url, key) {
-    if (window.supabase && url && key) {
+    if (!url || !key) {
+      this.isConnected = false;
+      this.client = null;
+      return false;
+    }
+
+    const cleanUrl = url.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+    const cleanKey = key.trim();
+
+    if (window.supabase && cleanUrl && cleanKey) {
       try {
-        this.client = window.supabase.createClient(url, key);
+        this.client = window.supabase.createClient(cleanUrl, cleanKey);
         this.isConnected = true;
-        console.log("Connected to Supabase Cloud Database!");
+        console.log("Connected to Supabase Cloud Database:", cleanUrl);
         return true;
       } catch (e) {
         console.error("Failed to connect to Supabase Cloud DB", e);
@@ -62,8 +76,7 @@ class DatabaseService {
         email: user.email,
         role: user.role,
         title: user.title,
-        homeroom_class: user.homeroomClass,
-        is_homeroom_teacher: user.isHomeroomTeacher,
+        class_teacher_class: user.classTeacherClass,
         subjects: user.subjects,
         class_id: user.classId,
         roll_no: user.rollNo,
@@ -81,48 +94,6 @@ class DatabaseService {
     if (!this.isConnected) return false;
     try {
       const { error } = await this.client.from('users').delete().eq('id', userId);
-      return !error;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  async fetchHomework() {
-    if (!this.isConnected) return null;
-    try {
-      const { data, error } = await this.client.from('homework').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async saveHomework(hw) {
-    if (!this.isConnected) return false;
-    try {
-      const { error } = await this.client.from('homework').upsert({
-        id: hw.id,
-        title: hw.title,
-        subject: hw.subject,
-        class_id: hw.classId,
-        teacher_id: hw.teacherId,
-        teacher_name: hw.teacherName,
-        description: hw.description,
-        due_date: hw.dueDate,
-        status: hw.status,
-        completed_by: hw.completedBy || []
-      });
-      return !error;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  async deleteHomework(hwId) {
-    if (!this.isConnected) return false;
-    try {
-      const { error } = await this.client.from('homework').delete().eq('id', hwId);
       return !error;
     } catch (e) {
       return false;
@@ -170,6 +141,17 @@ class DatabaseService {
     }
   }
 
+  async fetchAttendance() {
+    if (!this.isConnected) return null;
+    try {
+      const { data, error } = await this.client.from('student_attendance').select('*');
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
   async saveAttendance(classId, dateStr, period, markedBy, records) {
     if (!this.isConnected) return false;
     try {
@@ -179,7 +161,7 @@ class DatabaseService {
         period: period,
         marked_by: markedBy,
         records: records
-      }, { onConflict: 'class_id,date_str' });
+      });
       return !error;
     } catch (e) {
       return false;
