@@ -293,14 +293,21 @@ class App {
       }
     };
 
-    // --- NOTICE HANDLERS ---
     window.openNoticeModal = () => {
       const currentUser = store.getCurrentUser();
       if (!currentUser || currentUser.role === 'student') {
         this.showToast("Permission denied: Students cannot post announcements.", "danger");
         return;
       }
-      document.getElementById('create-notice-modal')?.classList.remove('hidden');
+      const modal = document.getElementById('create-notice-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      } else {
+        window.router.navigate('notices');
+        setTimeout(() => {
+          document.getElementById('create-notice-modal')?.classList.remove('hidden');
+        }, 50);
+      }
     };
     window.closeNoticeModal = () => {
       document.getElementById('create-notice-modal')?.classList.add('hidden');
@@ -460,7 +467,15 @@ class App {
         this.showToast("Permission Denied: Only Teachers can submit leave applications.", "danger");
         return;
       }
-      document.getElementById('leave-request-modal')?.classList.remove('hidden');
+      const modal = document.getElementById('leave-request-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      } else {
+        window.router.navigate('staff-attendance');
+        setTimeout(() => {
+          document.getElementById('leave-request-modal')?.classList.remove('hidden');
+        }, 50);
+      }
     };
     window.closeLeaveModal = () => {
       document.getElementById('leave-request-modal')?.classList.add('hidden');
