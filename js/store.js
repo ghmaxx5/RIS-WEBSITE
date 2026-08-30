@@ -1,4 +1,4 @@
-// RIS School — Central State Store with Complete Cloud Sync & Leave Requests (v4.9)
+// RIS School — Central State Store with Bidirectional Cloud Auto-Sync (v5.0)
 import { initialMockData } from './mockData.js';
 
 const STORAGE_KEY = 'ris_school_app_data_v4.6';
@@ -60,13 +60,13 @@ class Store {
     this.saveData();
   }
 
-  // --- INTELLIGENT DIFF CLOUD SYNC ---
+  // --- TWO-WAY BIDIRECTIONAL CLOUD SYNC ---
   async syncWithCloud(db) {
     if (!db || !db.isConnected) return;
     try {
       let hasChanges = false;
 
-      // 1. Fetch & Merge Cloud Notices
+      // 1. NOTICES: Download from cloud & upload local
       const cloudNotices = await db.fetchNotices();
       if (cloudNotices && Array.isArray(cloudNotices)) {
         cloudNotices.forEach(cn => {
@@ -93,9 +93,16 @@ class Store {
             hasChanges = true;
           }
         });
+
+        // Push any local notice not yet in Supabase
+        for (const ln of this.data.notices) {
+          if (!cloudNotices.some(cn => cn.id === ln.id)) {
+            await db.saveNotice(ln);
+          }
+        }
       }
 
-      // 2. Fetch & Merge Cloud Leave Requests
+      // 2. LEAVE REQUESTS: Download from cloud & upload local
       const cloudLeaves = await db.fetchLeaveRequests();
       if (cloudLeaves && Array.isArray(cloudLeaves)) {
         cloudLeaves.forEach(cl => {
@@ -123,9 +130,16 @@ class Store {
             hasChanges = true;
           }
         });
+
+        // Push any local leave request not yet in Supabase
+        for (const ll of this.data.leaveRequests) {
+          if (!cloudLeaves.some(cl => cl.id === ll.id)) {
+            await db.saveLeaveRequest(ll);
+          }
+        }
       }
 
-      // 3. Fetch & Merge Cloud Attendance
+      // 3. ATTENDANCE: Download from cloud & upload local
       const cloudAttendance = await db.fetchAttendance();
       if (cloudAttendance && Array.isArray(cloudAttendance)) {
         cloudAttendance.forEach(ca => {
@@ -147,7 +161,7 @@ class Store {
         });
       }
 
-      // 4. Fetch & Merge Cloud Users
+      // 4. USERS: Download from cloud
       const cloudUsers = await db.fetchUsers();
       if (cloudUsers && Array.isArray(cloudUsers)) {
         cloudUsers.forEach(cu => {

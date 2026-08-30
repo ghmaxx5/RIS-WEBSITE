@@ -1,4 +1,4 @@
-// RIS School — Cloud Database Client (Embedded Supabase with Leave Requests Sync)
+// RIS School — Cloud Database Client (Full Two-Way Supabase Sync)
 
 const DEFAULT_SUPABASE_URL = "https://mqrytfngbnwxolatcnng.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcnl0Zm5nYm53eG9sYXRjbm5nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwODE5ODIsImV4cCI6MjEwMzY1Nzk4Mn0.iZAgRly0aglUMmW8-o3EXyJVb282ifMa-7xZt_RlpEs";
@@ -54,7 +54,7 @@ class DatabaseService {
     return false;
   }
 
-  // --- CLOUD SYNC METHOD HELPERS ---
+  // --- USERS CLOUD SYNC ---
   async fetchUsers() {
     if (!this.isConnected) return null;
     try {
@@ -99,6 +99,7 @@ class DatabaseService {
     }
   }
 
+  // --- NOTICES CLOUD SYNC ---
   async fetchNotices() {
     if (!this.isConnected) return null;
     try {
@@ -124,8 +125,10 @@ class DatabaseService {
         author_role: notice.authorRole,
         read_by: notice.readBy || []
       });
+      if (error) console.error("Error upserting notice in Supabase:", error);
       return !error;
     } catch (e) {
+      console.error("Exception in saveNotice:", e);
       return false;
     }
   }
@@ -140,6 +143,7 @@ class DatabaseService {
     }
   }
 
+  // --- ATTENDANCE CLOUD SYNC ---
   async fetchAttendance() {
     if (!this.isConnected) return null;
     try {
@@ -161,8 +165,10 @@ class DatabaseService {
         marked_by: markedBy,
         records: records
       });
+      if (error) console.error("Error saving attendance to Supabase:", error);
       return !error;
     } catch (e) {
+      console.error("Exception in saveAttendance:", e);
       return false;
     }
   }
@@ -172,9 +178,13 @@ class DatabaseService {
     if (!this.isConnected) return null;
     try {
       const { data, error } = await this.client.from('leave_requests').select('*').order('submitted_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase fetchLeaveRequests error:", error);
+        throw error;
+      }
       return data;
     } catch (e) {
+      console.warn("fetchLeaveRequests exception:", e);
       return null;
     }
   }
@@ -194,8 +204,10 @@ class DatabaseService {
         status: leave.status,
         reviewer_note: leave.reviewerNote
       });
+      if (error) console.error("Error saving leave request to Supabase:", error);
       return !error;
     } catch (e) {
+      console.error("Exception in saveLeaveRequest:", e);
       return false;
     }
   }
