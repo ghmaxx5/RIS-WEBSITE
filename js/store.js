@@ -95,7 +95,22 @@ class Store {
         // NEVER re-add any notice that was locally deleted
         .filter(n => !this.pendingDeletedNotices.has(n.id));
 
+      const previousIds = new Set(this.data.notices.map(n => n.id));
+      const isInitial = this.data.notices.length === 0;
+
       if (JSON.stringify(this.data.notices) !== JSON.stringify(mappedList)) {
+        // Trigger native push notification on mobile when another user posts a notice
+        if (!isInitial && typeof window !== 'undefined' && window.nativeBridge) {
+          const currentUser = this.getCurrentUser();
+          const incomingNew = mappedList.filter(n => !previousIds.has(n.id) && (!currentUser || n.authorId !== currentUser.id));
+          incomingNew.forEach(n => {
+            window.nativeBridge.sendNativeNotification({
+              title: (n.priority === 'urgent' ? '🚨 URGENT: ' : '📢 ') + n.title,
+              body: n.content
+            });
+          });
+        }
+
         this.data.notices = mappedList;
         this.saveData();
       }

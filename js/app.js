@@ -42,9 +42,10 @@ class App {
       }
     }
 
-    // Background poll: leave requests + attendance + users (NOT notices)
+    // Background poll: notices (triggers native notifications on incoming) + leaves + attendance + users
     setInterval(async () => {
       if (db.isConnected) {
+        await store.syncNoticesOnce(db);
         await store.syncWithCloud(db);
       }
     }, 10000);

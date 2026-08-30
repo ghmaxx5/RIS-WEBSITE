@@ -85,8 +85,8 @@ export function renderNavbar() {
                   ` : ''}
                 </button>
 
-                <!-- Notifications Dropdown Box -->
-                <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-72 sm:w-96 glass-card bg-slate-900/95 border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-50">
+                <!-- Notifications Dropdown Box (Centered on Mobile, Aligned on Desktop) -->
+                <div id="notifications-dropdown" class="hidden fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-w-sm sm:max-w-none mx-auto sm:mx-0 glass-card bg-slate-900/98 border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-50">
                   <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
                     <div class="font-bold text-sm flex items-center gap-2">
                       <i class="ph-bold ph-bell-ringing text-blue-400"></i> Announcements
