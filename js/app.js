@@ -344,18 +344,19 @@ class App {
       }
 
       if (confirm("Are you sure you want to delete this notice?")) {
-        // Delete from local state immediately — pendingDeletedNotices prevents sync from re-adding it
+        // 1. Remove from local state immediately and persist to localStorage
+        //    so background cloud sync can NEVER re-add this notice
         store.deleteNotice(noticeId);
         this.render();
         this.showToast("Notice deleted.", "warning");
 
-        // Then clean from Supabase in background
+        // 2. Delete from Supabase cloud in background
         if (db.isConnected) {
           await db.deleteNotice(noticeId);
-          // Only clear from pending set after confirmed Supabase deletion
+          // 3. Only after Supabase confirms deletion, remove from the blocked set
           store.pendingDeletedNotices.delete(noticeId);
-        } else {
-          store.pendingDeletedNotices.delete(noticeId);
+          const remaining = [...store.pendingDeletedNotices];
+          localStorage.setItem('ris_deleted_notice_ids', JSON.stringify(remaining));
         }
       }
     };

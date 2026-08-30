@@ -9,7 +9,9 @@ class Store {
     this.currentUserId = localStorage.getItem('ris_current_user_id') || null;
     this.adminSessionActive = localStorage.getItem('ris_admin_session_active') === 'true';
     this.listeners = [];
-    this.pendingDeletedNotices = new Set(); // IDs deleted locally but Supabase delete may still be in-flight
+    // Persist deleted notice IDs across reloads so background sync NEVER re-adds them
+    const raw = localStorage.getItem('ris_deleted_notice_ids');
+    this.pendingDeletedNotices = new Set(raw ? JSON.parse(raw) : []);
   }
 
   loadData() {
@@ -362,8 +364,9 @@ class Store {
   deleteNotice(noticeId) {
     const user = this.getCurrentUser();
     if (!user || user.role === 'student') return false;
-    // Mark as deleted immediately so background sync never re-adds it
+    // Mark as permanently deleted — persisted to localStorage so page reload won't bring it back
     this.pendingDeletedNotices.add(noticeId);
+    localStorage.setItem('ris_deleted_notice_ids', JSON.stringify([...this.pendingDeletedNotices]));
     this.data.notices = this.data.notices.filter(n => n.id !== noticeId);
     this.saveData();
     return true;
