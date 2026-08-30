@@ -86,8 +86,8 @@ export function renderNavbar() {
                 </button>
 
                 <!-- Notifications Dropdown Box (Centered on Mobile, Aligned on Desktop) -->
-                <div id="notifications-dropdown" class="hidden fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-w-sm sm:max-w-none mx-auto sm:mx-0 glass-card bg-slate-900/98 border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-50">
-                  <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                <div id="notifications-dropdown" class="hidden fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:w-auto sm:top-full sm:mt-2 sm:min-w-96 border border-slate-700 text-slate-100 rounded-2xl shadow-2xl p-4 z-[9999]" style="background:#0f172a !important;">
+                  <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
                     <div class="font-bold text-sm flex items-center gap-2">
                       <i class="ph-bold ph-bell-ringing text-blue-400"></i> Announcements
                     </div>

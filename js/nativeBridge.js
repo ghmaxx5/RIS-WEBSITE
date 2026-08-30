@@ -6,6 +6,7 @@ class NativeBridge {
     this.isNative = false;
     this.plugins = {};
     this.hasNotificationPermission = false;
+    this._channelCreated = false;
   }
 
   async init(appInstance) {
@@ -18,7 +19,7 @@ class NativeBridge {
       await this.initNativePlugins();
       this.setupHardwareBackButton();
       this.setupStatusBar();
-      await this.requestNotificationPermissions();
+      await this.setupNotifications();
     } else {
       this.setupWebNotificationFallback();
     }
@@ -77,68 +78,80 @@ class NativeBridge {
     }
   }
 
-  async requestNotificationPermissions() {
+  async setupNotifications() {
     try {
       const { LocalNotifications } = this.plugins;
-      if (LocalNotifications) {
-        // Create high-importance notification channel for Android 8.0+ / Android 13+
-        await LocalNotifications.createChannel({
-          id: 'ris_notices_channel',
-          name: 'School Announcements',
-          description: 'Official announcements and notices from Rose International School',
-          importance: 5, // IMPORTANCE_HIGH: popup heads-up banner on screen + sound + vibration
-          visibility: 1, // VISIBILITY_PUBLIC: shows on lockscreen & shade
-          vibration: true,
-          lights: true,
-          lightColor: '#2563eb'
-        });
+      if (!LocalNotifications) return;
 
-        const status = await LocalNotifications.requestPermissions();
-        this.hasNotificationPermission = status.display === 'granted';
-        console.log('[NativeBridge] Notification permission status:', status.display);
+      // 1. Request permission FIRST (required on Android 13+ / iOS)
+      const status = await LocalNotifications.requestPermissions();
+      this.hasNotificationPermission = status.display === 'granted';
+      console.log('[NativeBridge] Notification permission:', status.display);
+
+      if (!this.hasNotificationPermission) {
+        console.warn('[NativeBridge] Notification permission denied — notifications will not appear');
+        return;
       }
+
+      // 2. Create high-importance notification channel (required on Android 8.0+)
+      // Must be created AFTER permission is granted
+      await LocalNotifications.createChannel({
+        id: 'ris_school_notices',
+        name: 'School Notices',
+        description: 'Notices and announcements from Rose International School',
+        importance: 5,    // IMPORTANCE_HIGH — shows heads-up, plays sound, vibrates
+        visibility: 1,    // VISIBILITY_PUBLIC — shows on lockscreen
+        vibration: true,
+        lights: true,
+        lightColor: '#2563EB',
+        sound: null       // null = use default system notification sound
+      });
+
+      this._channelCreated = true;
+      console.log('[NativeBridge] Notification channel created successfully');
+
     } catch (e) {
-      console.warn('[NativeBridge] Notification channel/permission error:', e);
+      console.warn('[NativeBridge] Notification setup error:', e);
     }
   }
 
   setupWebNotificationFallback() {
-    if ('Notification' in window && Notification.permission === 'default') {
+    if ('Notification' in window) {
       this.hasNotificationPermission = Notification.permission === 'granted';
     }
   }
 
-  async sendNativeNotification({ title, body, id = Date.now(), extra = {} }) {
+  async sendNativeNotification({ title, body }) {
     try {
-      if (this.isNative && this.plugins.LocalNotifications) {
+      // --- Native Android path ---
+      if (this.isNative && this.plugins.LocalNotifications && this._channelCreated) {
+        const notifId = Math.floor(Math.random() * 2147483647); // must fit int32
         await this.plugins.LocalNotifications.schedule({
-          notifications: [
-            {
-              id: Math.floor(Math.random() * 1000000),
-              title: title || 'RIS School Notification',
-              body: body || '',
-              channelId: 'ris_notices_channel',
-              schedule: { at: new Date(Date.now() + 50) },
-              smallIcon: 'ic_launcher',
-              iconColor: '#2563eb',
-              extra: extra
-            }
-          ]
+          notifications: [{
+            id: notifId,
+            title: title || 'RIS School',
+            body: body || '',
+            channelId: 'ris_school_notices',
+            schedule: { at: new Date(Date.now() + 300) }, // 300ms from now
+            ongoing: false,
+            autoCancel: true
+          }]
+        });
+        console.log('[NativeBridge] Native notification scheduled, id:', notifId);
+        return true;
+      }
+
+      // --- Browser fallback ---
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title || 'RIS School', {
+          body: body || '',
+          icon: './assets/icon.png'
         });
         return true;
       }
 
-      // Browser Web Notification fallback
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-          body,
-          icon: './assets/icon.png',
-          badge: './assets/icon.png'
-        });
-        return true;
-      }
     } catch (e) {
-      console.warn('[NativeBridge] Notification dispatch exception:', e);
+      console.warn('[NativeBridge] Notification send error:', e);
     }
     return false;
   }
@@ -146,9 +159,8 @@ class NativeBridge {
   async triggerHaptic(type = 'light') {
     try {
       if (this.isNative && this.plugins.Haptics) {
-        const { Haptics, ImpactStyle } = this.plugins;
         const style = type === 'medium' ? 'MEDIUM' : (type === 'heavy' ? 'HEAVY' : 'LIGHT');
-        await Haptics.impact({ style });
+        await this.plugins.Haptics.impact({ style });
       } else if (navigator && navigator.vibrate) {
         navigator.vibrate(type === 'medium' ? 30 : 15);
       }
